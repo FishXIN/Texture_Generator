@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Reorganized source code into `app`, `features/assets`, `features/texture`, `features/export`, and `shared`, keeping the existing layout and rendering behavior.
+- Rewrote the bilingual README around verified capabilities, export limitations, and the proposed product direction.
+- Added product planning, roadmap, architecture, development, release, and contribution documentation; archived the initial implementation proposal.
+- Updated repository metadata and download links to `FishXIN/Texture_Generator`.
+- Clarified SVG export copy: SVG source files can contain raster images, fonts, or filters, so SVG import alone does not certify pure-vector output.
+- Moved release documentation out of the build output directory and ignored generated packages, TypeScript caches, and local editor configuration.
+
+### Added
+
+- A `typecheck` command and CI checks for main-branch pushes and pull requests.
+- A pull request template; release builds now install the committed dependency lockfile with `npm ci`.
+
+### Fixed
+
+- Fixed file-input reset after asynchronous asset loading by retaining the input element instead of accessing an expired React event target.
+
 ## v0.1.5
 
 ### Changed

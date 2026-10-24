@@ -17,10 +17,8 @@ jobs:
         include:
           - os: macos-latest
             build_script: dist:mac
-            asset_glob: release/*.dmg
           - os: windows-latest
             build_script: dist:win
-            asset_glob: release/*.exe
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -31,9 +29,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build Installer
         run: npm run ${{ matrix.build_script }}

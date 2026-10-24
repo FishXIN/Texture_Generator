@@ -1,380 +1,117 @@
-# Texture Generator
+# Texture Generator · 纹理生成器
 
-<div align="center">
+面向设计师的本地纹理与图形编排工具。导入素材，控制疏密、尺寸和旋转，用随机种子复现排列，再导出到设计工作流。
 
-一个面向设计场景的桌面纹理 / 阵列生成工具。  
-A desktop texture / array generator built for design production workflows.
+[下载安装包](https://github.com/FishXIN/Texture_Generator/releases/latest) · [使用与能力边界](#当前能力) · [产品策划](docs/product-plan.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [English](#english)
 
-[![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
-[![Release](https://img.shields.io/badge/Releases-GitHub-black?logo=github)](https://github.com/BestXin-lllpmqlll/Texture_Generator/releases)
+## 项目定位
 
-</div>
+让纹理从一次性的随机结果，变成可控制、可复用的设计素材。
 
----
+当前 `0.1.5` 版本提供底图与元素素材的随机编排、实时预览和静态导出。后续将围绕**参数化纹理、自定义图形编排、可靠导出**扩展无缝平铺、图层和循环动态纹理。
 
-## 中文
+适合制作包装与品牌图案、视觉设计中的素材阵列，以及背景纹理探索。当前没有内置颗粒生成器，也不保证排列结果能够无缝重复。
 
-### 项目简介
+## 当前能力
 
-`Texture Generator` 是一个基于 `Electron + Vite + React + TypeScript + Canvas` 的跨平台桌面应用，用来快速生成纹理、贴图阵列和素材铺排结果。
+| 功能 | 当前支持 |
+| --- | --- |
+| 素材导入 | 一张底图、多个元素；PNG、JPEG、WebP、SVG；点击或拖拽导入 |
+| 自动编排 | 随机散布；控制元素间距和边缘间距 |
+| 参数控制 | 目标数量、基础尺寸、尺寸随机度、基础角度、旋转随机度、完全随机旋转 |
+| 随机复现 | 相同画布、素材顺序、参数与种子生成相同排列；支持更换种子 |
+| 预览 | 参数即时更新；画布按容器适配；浅色与深色界面 |
+| 静态导出 | PNG、JPEG，支持 1× / 2× / 3× 尺寸 |
+| SVG 导出 | 底图和全部元素均为 SVG 时，组合源 SVG 图形结构 |
+| 本地文件 | Electron 系统保存对话框；浏览器运行时回退为下载 |
 
-你可以上传一张底图作为画布，再批量导入多个元素素材，通过密度、尺寸、元素间距、边缘间距、旋转和随机种子等参数实时生成排布预览，并导出为 `PNG`、`JPEG`、`SVG` 文件。
+**导出需要注意：**
 
-这个项目适合：
+- **PNG** 保留场景已有透明度，但总会绘制底图；不透明底图不会自动变成透明。当前没有独立的背景开关或透明度参数。
+- **JPEG** 使用白色背景，不保留透明通道。
+- **SVG** 保留图形结构，不会先把整个场景转成一张位图。源 SVG 自身仍可能包含位图、字体或滤镜；目前没有纯矢量检查和完整兼容性检查，不能仅凭 `.svg` 后缀保证纯矢量。
+- 导出范围为整个底图画布。位图按所选倍率重新绘制；放大原有位图不会增加其原始细节。
+- “密度”目前表示目标实例数。间距和画布限制可能让实际生成数量低于目标，结果以界面统计为准。
 
-- 贴图设计与花型探索
-- 背景图案批量生成
-- 电商、包装、视觉稿中的素材阵列排版
-- 需要可复现随机结果的设计工作流
+多图层、自由摆放、无缝平铺、蒙版、连续噪点、动画、PNG 序列、项目保存和撤销重做均为**规划功能**，尚未实现。详见[迭代路线](docs/roadmap.md)。
 
-### 核心亮点
+## 使用
 
-- 实时预览：参数变更后以防抖方式刷新画布，兼顾流畅度与性能
-- 拖拽导入：支持拖拽或点击上传底图与多个元素素材
-- 随机可复现：支持随机种子控制和一键重排，方便复用同一排布逻辑
-- 精细排布：支持元素间距与边缘间距控制，可快速得到更规整或更自由的铺排效果
-- 智能导出：支持 `PNG`、`JPEG`、`SVG` 三种格式，并按素材类型自动切换可用导出能力
-- 桌面原生体验：通过 Electron 调用系统保存对话框，导出路径更符合桌面软件习惯
-- 可发布安装包：已配置 `electron-builder` 与 GitHub Actions，支持 macOS / Windows 分发
+1. 导入底图，确定画布尺寸。
+2. 批量导入元素素材。
+3. 调整密度、尺寸、旋转和间距，查看实时排列。
+4. 保留满意的随机种子；需要新排列时点击“重排”。
+5. 选择 PNG、JPEG 或符合条件的 SVG，保存到本地。
 
-### 功能特性
+安装包在 [GitHub Releases](https://github.com/FishXIN/Texture_Generator/releases) 下载。当前发布流程覆盖 macOS 和 Windows；不同版本的可用架构以实际附件为准。发布说明见[安装包与发布](docs/releases.md)。
 
-- 底图上传：支持 `PNG`、`JPEG`、`WEBP`、`SVG`
-- 元素上传：支持 `PNG`、`JPEG`、`WEBP`、`SVG`，可多选批量导入
-- 参数控制：
-  - 密度
-  - 基础尺寸
-  - 元素间距
-  - 边缘间距
-  - 尺寸随机度
-  - 基础角度
-  - 旋转随机度
-  - 完全随机旋转
-  - 随机种子
-- 实时统计：
-  - 底图尺寸
-  - 元素数量
-  - 排布实例数量
-- 导出能力：
-  - `PNG`
-  - `JPEG`
-  - `SVG` 真矢量导出，仅当底图和全部元素素材都是 `SVG` 时可用
+## 本地开发
 
-### 最新更新
-
-- 参数实时刷新：
-  调整滑块或输入数值时，画布会立即更新，不再等待防抖延迟。
-- 开发环境更宽松：
-  当 `5173` 端口已被占用时，Vite 开发服务允许自动切换到其他可用端口。
-- 新增 `元素间距` 滑块：
-  正值会阻止元素彼此重叠，负值则允许元素有意压叠。
-- 新增 `边缘间距` 滑块：
-  负值允许元素越过画布边缘并最多保留约一半可见，`0` 时刚好贴边，正值时会与边缘保持安全距离。
-- 升级 `SVG` 导出逻辑：
-  当底图和所有元素都是 `SVG` 时，可导出真正的矢量结构；只要混入任意位图素材，`SVG` 按钮就会自动置灰并给出提示。
-
-### 为什么这个工具实用
-
-- 比手工复制旋转缩放更快：适合快速试出多个方向
-- 比纯脚本更直观：设计师可直接在 UI 中调参数
-- 比一次性随机更稳定：随机种子让结果可回放、可复用、可沟通
-
-### 技术栈
-
-- Electron
-- Vite
-- React 18
-- TypeScript
-- Tailwind CSS
-- Zustand
-- Canvas 2D
-- electron-builder
-- GitHub Actions
-
-### 快速开始
-
-推荐环境：
-
-- Node.js `20+`
-- npm `10+`
-
-安装依赖并启动开发环境：
+推荐 Node.js 20 LTS 或 22 LTS、npm 10+。
 
 ```bash
-npm install
+git clone https://github.com/FishXIN/Texture_Generator.git
+cd Texture_Generator
+npm ci
 npm run dev
 ```
 
-### 打包
-
-构建当前平台安装包：
-
 ```bash
-npm run dist
+npm run typecheck   # 类型检查
+npm run build       # 编译前端与 Electron
+npm run preview     # 浏览器预览编译后的前端
+npm run dist        # 当前平台安装包
 ```
 
-分别构建 macOS / Windows：
+macOS / Windows 打包分别使用 `npm run dist:mac` / `npm run dist:win`。安装包输出到 `release/`，不提交到 Git。启动、证书问题和构建约定见[开发指南](docs/development.md)。
 
-```bash
-npm run dist:mac
-npm run dist:win
-```
-
-默认产物输出到 `release/` 目录。
-
-### 使用流程
-
-1. 上传底图
-2. 拖入或批量选择元素素材
-3. 调整密度、尺寸、旋转与随机参数
-4. 观察实时预览效果
-5. 选择导出格式并保存到本地
-
-### GitHub 发布
-
-仓库已包含 GitHub Actions 发布流程：
-
-- 推送 `v*` 标签后自动触发构建
-- 自动生成 GitHub Release
-- 自动上传 macOS / Windows 安装包到 Release Assets
-
-示例：
-
-```bash
-git tag v0.1.2
-git push origin v0.1.2
-```
-
-发布页：
-
-- [GitHub Releases](https://github.com/BestXin-lllpmqlll/Texture_Generator/releases)
-- [Changelog](./CHANGELOG.md)
-
-### 项目结构
+## 目录
 
 ```text
-.
-├── electron/              # Electron 主进程与 preload
+Texture_Generator/
+├── electron/                 # 桌面窗口、预加载、原生文件保存
 ├── src/
-│   ├── components/        # 业务组件与 UI 组件
-│   ├── hooks/             # 复用逻辑
-│   ├── renderer/          # 排布计算、Canvas 渲染、SVG 导出
-│   ├── store/             # Zustand 状态管理
-│   └── App.tsx            # 主界面
-├── .github/workflows/     # CI / Release 流程
-├── electron-builder.yml   # 打包配置
+│   ├── app/                  # 应用入口、界面组装、全局样式
+│   ├── features/
+│   │   ├── assets/           # 素材导入、解码、类型、状态与界面
+│   │   ├── texture/          # 参数、随机排列、Canvas 渲染与预览
+│   │   └── export/           # 导出面板、SVG 序列化、格式类型
+│   └── shared/               # 基础 UI、主题、通用工具与桌面类型
+├── docs/                     # 产品策划、路线、架构与开发说明
+├── .github/                  # 构建检查、发布流程与协作模板
+├── electron-builder.yml      # 安装包配置
 └── package.json
 ```
 
-### 常见问题
+模块职责和扩展位置见[架构说明](docs/architecture.md)。只为已有能力建立目录，规划中的功能在实现时再增加模块。
 
-#### 1. 为什么推荐桌面端而不是浏览器版？
+## 参与改进
 
-桌面端可以直接调用系统文件保存对话框，导出体验更稳定，也更适合处理本地素材文件。
+欢迎通过 [Issues](https://github.com/FishXIN/Texture_Generator/issues) 提交实际设计场景、导入异常或导出问题。请附上复现步骤、系统和版本；素材仅在可以公开时附带。
 
-#### 2. SVG 导出是纯矢量吗？
-
-当底图和所有元素素材都是 `SVG` 时，导出结果是纯矢量结构；如果任意素材是位图，界面会自动禁用 `SVG` 导出，仅保留位图格式。
-
-#### 3. 如果本地安装依赖失败怎么办？
-
-如果你在本地遇到 SSL 证书相关错误，例如 `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`，通常与 Node / npm / 系统证书环境有关。建议优先检查：
-
-- Node 与 npm 版本
-- 企业网络或代理设置
-- 系统根证书是否完整
-
-### Roadmap
-
-- 更多排布算法
-- 图层混合与透明度控制
-- 参数预设保存 / 加载
-- 更完整的发布产物与版本管理
-
-### License
-
-MIT
-
----
+提交代码前阅读[贡献说明](CONTRIBUTING.md)，并运行类型检查与构建。[变更记录](CHANGELOG.md)区分已发布版本与尚未发布的改动。
 
 ## English
 
-### Overview
+Texture Generator is a local-first desktop tool for designers to arrange imported SVG and raster assets into reproducible texture layouts.
 
-`Texture Generator` is a cross-platform desktop app built with `Electron + Vite + React + TypeScript + Canvas` for generating texture layouts, repeated patterns, and randomized element arrangements.
+The current **0.1.5** release supports:
 
-You can upload one base image as the canvas, import multiple element assets in batch, tweak parameters such as density, size, element spacing, edge margin, rotation, and random seed, and export the result as `PNG`, `JPEG`, or `SVG`.
+- A base image and multiple element assets: PNG, JPEG, WebP and SVG.
+- Seeded random placement with size, rotation, spacing and edge-margin controls.
+- Immediate Canvas preview and light / dark interface themes.
+- PNG and JPEG export at 1×, 2× or 3×.
+- SVG composition when all imported assets are SVG, preserving their source graphic structure.
+- Native file saving in Electron and download fallback in a browser.
 
-This project is a good fit for:
+PNG preserves existing scene transparency, but always includes the base image. JPEG uses a white background. SVG inputs may contain embedded images, fonts or filters, so the current exporter **does not certify pure-vector output or full compatibility**. Export covers the entire base-image canvas; spacing constraints may produce fewer elements than the requested count.
 
-- texture and pattern exploration
-- background asset generation
-- repeated element composition for visual design
-- reproducible random layouts in production workflows
+Built-in noise generation, layers, manual placement, seamless tiling, masks, animation, PNG sequences, project persistence and undo / redo are planned capabilities. They are not available in the current release.
 
-### Highlights
+Use `npm ci` followed by `npm run dev` for development. Run `npm run typecheck` and `npm run build` before submitting changes. Installers are available on [GitHub Releases](https://github.com/FishXIN/Texture_Generator/releases/latest).
 
-- Real-time preview with debounced rendering for smoother interactions
-- Drag-and-drop asset import for both the base image and element images
-- Reproducible randomness with seed control and reshuffle support
-- Fine layout control with element spacing and edge margin sliders
-- Smart export capability that enables true vector SVG only when all imported assets are SVG
-- Native desktop save flow powered by Electron system dialogs
-- Release-ready packaging pipeline for macOS and Windows
+See the [roadmap](docs/roadmap.md), [architecture](docs/architecture.md) and [development guide](docs/development.md) for the current direction and implementation boundaries. Product planning documents are currently in Chinese.
 
-### Features
+## License
 
-- Base image input: `PNG`, `JPEG`, `WEBP`, `SVG`
-- Element input: `PNG`, `JPEG`, `WEBP`, `SVG`
-- Batch import for multiple element assets
-- Parameter controls:
-  - density
-  - base size
-  - element spacing
-  - edge margin
-  - size randomness
-  - base angle
-  - rotation randomness
-  - fully random rotation
-  - random seed
-- Live stats:
-  - base image size
-  - number of elements
-  - number of generated placements
-- Export formats:
-  - `PNG`
-  - `JPEG`
-  - true vector `SVG` export when every imported asset is SVG
-
-### Latest Updates
-
-- Real-time parameter preview:
-  the canvas now refreshes immediately while sliders and numeric values are being adjusted.
-- More flexible dev server startup:
-  when port `5173` is occupied, Vite can now fall back to another available port automatically.
-- Added an `element spacing` slider:
-  positive values prevent overlap, while negative values allow intentional overlap.
-- Added an `edge margin` slider:
-  negative values let elements cross the border until about half remains visible, `0` keeps them tangent to the edge, and positive values keep them away from the canvas boundary.
-- Upgraded SVG export:
-  when the base asset and all elements are SVG, the app exports a true vector SVG; if any raster asset is present, the `SVG` option is disabled with a clear hint.
-
-### Why It Is Useful
-
-- Faster than manually duplicating, rotating, and scaling assets
-- More visual than a script-only workflow
-- More controllable than one-off randomness thanks to reproducible seeds
-
-### Tech Stack
-
-- Electron
-- Vite
-- React 18
-- TypeScript
-- Tailwind CSS
-- Zustand
-- Canvas 2D
-- electron-builder
-- GitHub Actions
-
-### Quick Start
-
-Recommended environment:
-
-- Node.js `20+`
-- npm `10+`
-
-Install dependencies and start the dev server:
-
-```bash
-npm install
-npm run dev
-```
-
-### Build
-
-Build for the current platform:
-
-```bash
-npm run dist
-```
-
-Build macOS and Windows packages separately:
-
-```bash
-npm run dist:mac
-npm run dist:win
-```
-
-Artifacts are generated in the `release/` directory by default.
-
-### Workflow
-
-1. Upload a base image
-2. Drag in or batch select element assets
-3. Adjust density, size, rotation, and randomness
-4. Review the real-time preview
-5. Export the final result in your preferred format
-
-### GitHub Release
-
-The repository already includes a GitHub Actions release workflow:
-
-- pushing a `v*` tag triggers the build
-- GitHub Release can be created automatically
-- macOS and Windows installers are uploaded as release assets
-
-Example:
-
-```bash
-git tag v0.1.3
-git push origin v0.1.3
-```
-
-Releases:
-
-- [GitHub Releases](https://github.com/BestXin-lllpmqlll/Texture_Generator/releases)
-
-### Project Structure
-
-```text
-.
-├── electron/              # Electron main process and preload
-├── src/
-│   ├── components/        # UI and feature components
-│   ├── hooks/             # shared hooks
-│   ├── renderer/          # layout generation, canvas rendering, SVG export
-│   ├── store/             # Zustand state stores
-│   └── App.tsx            # main application shell
-├── .github/workflows/     # CI / release workflow
-├── electron-builder.yml   # packaging config
-└── package.json
-```
-
-### FAQ
-
-#### 1. Why use a desktop app instead of a browser-only app?
-
-A desktop app provides a more reliable local file workflow and integrates nicely with native save dialogs.
-
-#### 2. Is SVG export fully vector-based?
-
-Yes, but only when the base asset and all element assets are SVG files. If any raster asset is included, the SVG option is disabled and only raster exports remain available.
-
-#### 3. What if dependency installation fails locally?
-
-If you run into SSL certificate related issues such as `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, check your Node/npm versions, proxy settings, and local certificate environment first.
-
-### Roadmap
-
-- more layout algorithms
-- layer blending and opacity controls
-- preset save / load support
-- more complete release assets and versioning workflow
-
-### License
-
-MIT
+[MIT](LICENSE)

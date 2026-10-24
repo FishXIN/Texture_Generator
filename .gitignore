@@ -6,8 +6,9 @@ dist-electron
 .vscode/*
 !.vscode/extensions.json
 .idea
-release/downloads/*
-!release/downloads/.gitkeep
+release/
+.tsbuild/
+.trae/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
