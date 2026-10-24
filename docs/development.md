@@ -19,6 +19,8 @@ npm run dev:web
 
 默认链接为 `http://127.0.0.1:5173`。查看编译结果使用 `npm run build` 和 `npm run preview`。浏览器使用文件下载，Electron 使用系统保存对话框。首版针对桌面创作，未针对手机布局做适配。
 
+默认打开黑白纹理素材工作台；`http://127.0.0.1:5173/?studio=pattern` 为原图形 / 动态入口。两种入口使用同一服务地址，旧 `.texture.json` 在默认入口打开时自动转到对应工作台。
+
 ## 检查与构建
 
 ```bash
@@ -31,7 +33,7 @@ npm test
 - `typecheck` 检查 TypeScript 项目。
 - `build` 执行类型检查，编译前端到 `dist/`、主进程和 preload 到 `dist-electron/`。
 - `.tsbuild/` 为 TypeScript 构建缓存。
-- `test` 在 Chromium 中运行 `tests/studio.spec.ts`，自动启动仅浏览器的开发服务。CI 在主分支推送和 Pull Request 时运行浏览器验收、类型检查与构建。
+- `test` 在 Chromium 中运行 `tests/material.spec.ts` 与 `tests/studio.spec.ts`，自动启动仅浏览器的开发服务。CI 在主分支推送和 Pull Request 时运行浏览器验收、类型检查与构建。
 - 已有 Chromium 可通过 `TEXTURE_TEST_BROWSER=/absolute/path/to/chrome npm test` 指定；路径只用于本地，不写入仓库。运行测试前退出占用 5173 的旧服务，以免热更新产生多个不同版本的状态模块。
 
 修改代码路径后，同时检查 `index.html`、导入路径、`components.json` 与文档。当前 shadcn 配置使用 `tailwind.config.js`、`src/app/styles.css` 和 `src/shared/ui/`。
@@ -39,6 +41,8 @@ npm test
 ## 功能验证
 
 自动验收包括：
+
+黑白纹理的 6 项场景检查周期灰度与解析梯度（含方向、扰动、图层混合及导入边缘）、有限差分梯度对照、种子与分辨率一致、法线强度 / 方向、独立 PNG CRC / zlib / 真 16 位 / 黑色 Alpha、二维 UI 保存重开、4K 取消后重试与 SVG 安全导入。原有图形 / 动态的 10 项如下：
 
 1. 保存重开复现场景；只随机尺寸时位置、角度、颜色和手工对象保持不变；撤销重做恢复参数。
 2. 周期距离检查相邻单元间距；五种运动在普通 / 无缝画布的循环边界连续。
@@ -53,6 +57,10 @@ npm test
 像素比较允许浏览器光栅化的小幅抗锯齿差异；测试不保证所有第三方设计软件的 SVG、字体和滤镜表现。发布前应在计划支持的设计 / 合成软件中导入实际文件，检查纯矢量编辑、Alpha 合成、帧率和循环边界。
 
 ## 当前规模与性能边界
+
+黑白工作台：导出 128–4096 px，默认预览 512 px；最多 8 层、4 个源，单素材 5 MB、项目 25 MB。导入灰度源解码最长边上限 1024 px。生成和编码使用 Worker，取消直接终止任务；16 位 PNG 直接编码浮点值，预览仍是 8 位。具体公式、透明转换和边界见 [material-studio.md](material-studio.md)。
+
+图形 / 动态工作台：
 
 画布 64–4096 px；最多 16 层、32 个 SVG、20,000 自动颗粒、2,000 手工对象。每层颗粒最多 5,000；SVG 最多 5 MB / 20,000 节点，长宽比最多 512:1；项目文件最多 25 MB。
 

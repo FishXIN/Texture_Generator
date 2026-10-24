@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?studio=pattern');
   await expect(page.getByRole('heading', { name: '纹理工作台' })).toBeVisible();
 });
 

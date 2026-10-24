@@ -1,24 +1,48 @@
 # 架构与目录约定
 
-本文对应 0.2.0 工作台。旧版底图阵列作为独立入口保留，既有位图工作流不并入新的作品模型。
+本文对应 0.3.0。默认入口为黑白纹理素材工作台；既有图形 / 动态入口为 `?studio=pattern`。两种项目模型独立，原有底图阵列保留在图形工作台内。
 
 ## 模块职责
 
 | 目录 | 职责 | 主要入口 |
 | --- | --- | --- |
 | `electron/` | 窗口、预加载桥接、系统保存 | `main.ts`、`preload.ts` |
-| `src/app/` | 三栏工作台组装、播放控制、恢复提示、全局样式 | `App.tsx`、`styles.css` |
+| `src/app/` | 入口路由、旧工作台组装与全局样式 | `App.tsx`、`PatternStudio.tsx`、`styles.css` |
+| `features/material/` | 周期黑白场、梯度、可选法线、Worker、导入、真 8/16 位 PNG 与二维界面 | `engine.ts`、`model.ts`、`worker.ts`、`png.ts`、`MaterialStudio.tsx` |
 | `features/project/` | 可序列化作品、历史、参数预设、图层、素材列表、参数界面 | `model.ts`、`store.ts`、`io.ts`、`Library.tsx`、`Inspector.tsx` |
 | `features/assets/svg.ts` | SVG 清理、源文件保留、样式内联、ID 隔离、改色与解码缓存 | `sanitizeSvg`、`assetSvg`、`assetImage` |
 | `features/texture/engine/` | 确定性图形、周期避让、蒙版采样、运动与渲染 | `scene.ts`、`render.ts`、`rng.ts` |
 | `features/texture/components/` | 编辑画布与原有底图阵列界面 | `StudioCanvas.tsx`、`LegacyEditor.tsx` |
 | `features/export/` | 导出区域、检查、PNG/JPEG、三种 SVG、逐帧 ZIP | `studioExport.ts`、`studioSvg.ts`、`zip.ts` |
 | `shared/` | 公共 UI、旧版工具与桌面类型 | `ui/StudioFields.tsx`、`types/` |
-| `tests/` | 真实 Chromium 中的引擎性质与 UI 验收 | `studio.spec.ts` |
+| `tests/` | 真实 Chromium 中的引擎性质、独立文件验证与 UI 验收 | `material.spec.ts`、`studio.spec.ts` |
 
 同一功能的界面、类型和状态放在一起，不创建规划功能的空目录。跨模块使用 `@/`，模块内优先使用相对路径。
 
-## 作品数据流
+## 黑白纹理数据流
+
+```mermaid
+flowchart LR
+  Parameters[预设 / 图层 / 种子] --> Project[MaterialProject]
+  Import[本地灰度源 / SVG 清理] --> Project
+  Project --> History[保存 / 撤销 / 恢复]
+  Project --> Worker[Worker 周期灰度与解析梯度]
+  Worker --> Preview[二维纹理 / 透明 / 平铺检查]
+  Worker --> PNG[灰度或黑色 Alpha PNG]
+  Worker --> Normal[可选 RGB 法线 PNG]
+  PNG --> ZIP[配套 ZIP 与 manifest]
+  Normal --> ZIP
+```
+
+项目使用 `kind: surface-material` 与 `.material.json`，保存最多 20 步历史。8 个图层、4 个源；逐项验证类型、范围、唯一 ID 和引用。解码源最长边上限 1024 px，保留原始嵌入数据。SVG 在实际解码前重新清理；禁止远程位图 URL。
+
+引擎按归一化 UV 采样。整数周期 value noise、quintic 插值、周期 feature points、整数方向波向量和周期 domain warp 保持四边连续。所有图层运算也变换解析梯度，因此法线对应最终灰度。预览和不同导出尺寸在同一 UV 得到相同值。
+
+预览与正式导出使用独立 Worker；更新参数或取消终止对应 Worker，返回的旧任务不会覆盖新图。Worker 内完成 PNG 编码和 ZIP 打包。灰度 PNG 为 type 0；透明黑色为 type 4，gray=0、alpha=1−height；法线 type 2。16 位从浮点场大端写入，zlib 与 CRC32 遵循 PNG 格式，不经过 Canvas 降至 8 位。
+
+法线默认关闭。OpenGL / DirectX 仅绿色通道相反，强度不改变灰度。二维 Canvas 是 8 位预览；棋盘格等背景只由 CSS 提供。没有 WebGL 或 Three.js 依赖。细节和文件边界见 [material-studio.md](material-studio.md)。
+
+## 图形与动态作品数据流
 
 ```mermaid
 flowchart LR
@@ -63,4 +87,4 @@ PNG 序列采样首帧到循环结束前一帧，不重复结束帧。时长乘�
 
 `LegacyEditor` 沿用原 `assets/store.ts`、`texture/store.ts`、`generateLayout`、`renderScene` 与旧导出模块。旧 SVG 出口也进行清理与实例 ID 隔离；发现安全或效果兼容问题时，提示到工作台检查并使用相应出口。底图和位图素材的使用规则保持独立；新工作台的项目保存和循环序列不自动适用于该入口。
 
-后续新增连续纹理、路径排列与透明视频应分别扩展引擎和出口，不能绕过作品模型或静默降级。验收范围见 [development.md](development.md)。
+连续黑白纹理使用独立材质引擎。后续路径排列与透明视频应分别扩展对应引擎和出口，不能绕过作品模型或静默降级。验收范围见 [development.md](development.md)。

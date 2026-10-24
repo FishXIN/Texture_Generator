@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### 0.3.0 Monochrome textures
+
+- Added a 2D monochrome texture workspace with ten editable presets, periodic continuous fields, seeded speckles, layer blending and tiled/transparent inspection.
+- Added grayscale PNG/JPEG/WebP/SVG source import with original retention, SVG cleaning and optional periodic edge blending.
+- Added true 8/16-bit grayscale PNG and black-alpha PNG exports, optional OpenGL/DirectX normals and paired ZIP manifests at up to 4096 px.
+- Added Worker rendering and encoding with progress, termination on cancel, retry, project save/reopen and local history.
+- Made the main workflow suitable for Multiply overlays, transparent compositing and grayscale masks; normal output is disabled by default. No 3D viewport or Three.js dependency is included.
+- Retained the graphic/motion workspace at `?studio=pattern`; opening an older project routes to it.
+- Added six browser scenarios for periodic values/gradients, resolution and seed invariance, normal conventions, independent PNG/CRC/16-bit/alpha checks and cancellation recovery. The existing ten scenarios remain.
+
+No 0.3.0 installer release or third-party design software certification is implied by this source change.
+
 ### 0.2.0 Studio
 
 - Added a desktop browser/Electron texture studio with an independent canvas, transparent background, graphic particles, multiple layers and editable SVG placement.
