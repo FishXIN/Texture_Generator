@@ -26,7 +26,7 @@ export function StudioSelect({ label, value, onChange, children, disabled = fals
   const encode = (value: string | number | undefined) => `option:${String(value ?? '')}`;
   return <Select.Root value={encode(value)} onValueChange={v => onChange(v.slice(7))} disabled={disabled}>
     <Select.Trigger type="button" aria-label={label} data-value={String(value)}
-      className={`studio-select ${className}`} ref={triggerRef}>
+      className={`studio-select ${className}`} ref={triggerRef} onKeyDown={event => event.stopPropagation()}>
       <Select.Value/><Select.Icon><ChevronDown size={12}/></Select.Icon>
     </Select.Trigger>
     <Select.Portal container={container}>

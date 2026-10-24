@@ -33,7 +33,9 @@ test('shared popups support keyboard selection, outside dismissal and both expor
   await expect(category).toBeFocused();
   await category.click();await page.keyboard.press('Escape');
   await expect(page.getByRole('listbox')).toHaveCount(0);await expect(category).toBeFocused();
-  await category.click();await page.mouse.click(32,32);
+  await category.click();
+  await expect(page.getByRole('option',{name:'基础颗粒',exact:true})).toBeFocused();
+  await page.mouse.click(32,32);
   await expect(page.getByRole('listbox')).toHaveCount(0);
 
   await page.getByRole('button',{name:'导出',exact:true}).click();
@@ -43,6 +45,11 @@ test('shared popups support keyboard selection, outside dismissal and both expor
   await choose(dialog.getByLabel('贴图类型'),'normal');
   await dialog.getByRole('button',{name:'关闭导出'}).click();
   await page.goto('/?studio=pattern');
+  const zoom=page.getByRole('combobox',{name:'预览缩放'});
+  await zoom.focus();await zoom.press('Space');
+  await expect(page.getByRole('option',{name:'适配',exact:true})).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button',{name:'播放',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'导出',exact:true}).click();
   const legacy=page.getByRole('dialog');
   await choose(legacy.getByRole('combobox',{name:'文件格式'}),'sequence');
