@@ -29,6 +29,8 @@ test('fast live preview preserves the same texture values as the export renderer
 });
 
 test('canvas updates repeatedly while a slider is held, settles exactly, and undo restores the entire gesture',async({page})=>{
+  const session=await page.context().newCDPSession(page);
+  await session.send('Emulation.setCPUThrottlingRate',{rate:2});
   await expect.poll(()=>page.getByLabel('画布预览').evaluate((c:HTMLCanvasElement)=>c.width)).toBe(512);
   await expect(page.getByLabel('随机种子')).not.toBeVisible();
   await expect(page.getByLabel('输出通道')).toHaveCount(0);
@@ -36,12 +38,13 @@ test('canvas updates repeatedly while a slider is held, settles exactly, and und
   const canvasRect=(await page.getByLabel('画布预览').boundingBox())!;
   const signatures=new Set<string>();
   await page.mouse.move(rect.x+rect.width*.08,rect.y+rect.height/2);await page.mouse.down();
+  await expect.poll(async()=>[128,192].includes(await page.getByLabel('画布预览').evaluate((c:HTMLCanvasElement)=>c.width))).toBe(true);
+  let last=await canvasSignature(page);
   for(const ratio of [.15,.3,.45,.6,.75]){
     await page.mouse.move(rect.x+5+(rect.width-10)*ratio,rect.y+rect.height/2,{steps:4});
     await expect.poll(async()=>Math.abs(Number(await slider.inputValue())-ratio*4)).toBeLessThan(.15);
-    const last=[...signatures].at(-1);
-    await expect.poll(()=>canvasSignature(page)).not.toBe(last??'');
-    signatures.add(await canvasSignature(page));
+    await expect.poll(()=>canvasSignature(page)).not.toBe(last);
+    last=await canvasSignature(page);signatures.add(last);
     expect([128,192]).toContain(await page.getByLabel('画布预览').evaluate((c:HTMLCanvasElement)=>c.width));
     const liveRect=(await page.getByLabel('画布预览').boundingBox())!;
     expect(liveRect.width).toBeCloseTo(canvasRect.width,0);expect(liveRect.height).toBeCloseTo(canvasRect.height,0);
