@@ -1,7 +1,7 @@
 export const MAX_CANVAS_SIZE = 8192;
 export const EXPORT_SIZES = [128, 256, 512, 1024, 2048, 4096, 8192] as const;
 export const CANVAS_RATIOS = [
-  [1, 1], [16, 9], [9, 16], [4, 3], [3, 4], [3, 2], [2, 3], [4, 5], [5, 4], [21, 9],
+  [21, 9], [16, 9], [3, 2], [4, 3], [5, 4], [1, 1], [4, 5], [3, 4], [2, 3], [9, 16], [9, 21],
 ] as const;
 
 export function canvasDimensions(width: number, height: number, longest: number) {

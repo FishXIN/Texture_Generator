@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Canvas sizes and unified popups
 
-- Added ten common aspect ratios, resolution shortcuts through 8K and custom canvas dimensions. Resolution choices update both canvas and export sizes.
+- Added eleven common aspect ratios ordered from 21:9 to 9:21 with 1:1 centered, resolution shortcuts through 8K and custom canvas dimensions. Resolution choices update both canvas and export sizes.
 - Increased main-workbench PNG export to an 8192 px longest edge, with streamed row compression and unused-channel work omitted.
 - Exposed grayscale/transparent, normal and paired ZIP output directly in the export dialog; normal strength and convention remain in advanced settings.
 - Removed input frames including focus outlines, lightened dividers to `#e4e5eb` at 0.5 px, and replaced system select menus with shared neutral popups. Category, canvas, export and legacy controls support keyboard selection, scrolling and outside dismissal.
