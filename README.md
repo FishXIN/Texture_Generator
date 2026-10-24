@@ -1,14 +1,124 @@
-# Texture Generator · 纹理工作台
+# Texture Generator
+
+[English](#english) · [简体中文](#简体中文)
+
+## English
+
+A local texture studio for designers. Generate seamless monochrome paper grain, speckles, grunge, fibers and cracks for Multiply overlays, transparent compositing and grayscale masks. Normal maps are optional. The main workspace shows the texture directly in 2D.
+
+[Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
+
+**Main contains the 0.4.0 source. Existing release installers retain their older capabilities; check the attached version.**
+
+![Monochrome texture studio](docs/images/texture-studio.png)
+
+### Monochrome textures
+
+- 31 editable presets, grouped and searchable: papers, natural surfaces, pop/optical patterns and soft light.
+- Xuan, mulberry, cotton, watercolor, laid, recycled, kraft, aged and crumpled paper; white/black marble and ink marbling.
+- Halftone dots, variable dots, comic hatching, spectral interference and contours; glow, bokeh, mist and satin patterns.
+- Periodic noise, ridged noise, cellular patterns and smooth seeded dots with shared height/gradient calculations.
+- Layer visibility, locks, duplication, ordering, blending, contrast, brightness, inversion and domain warp, with dedicated fiber density, vein width, dot coverage, edge softness and light-radius controls.
+- Unit and 3 × 3 tiled preview; checkerboard, light and dark backgrounds for transparent output.
+- Local PNG / JPEG / WebP / SVG grayscale sources, original-source retention and optional periodic edge blending.
+- Project save/reopen, undo/redo and local recovery.
+- Worker rendering with progress, cancellation and retry; identical seeds and UV positions retain their composition at different resolutions.
+
+| Output | Usage |
+| --- | --- |
+| Grayscale PNG, 8 / 16 bit | Multiply overlay in a design app, grayscale mask or non-color height data |
+| Black transparent PNG, 8 / 16 bit | Black pigment with alpha = 1 − grayscale; ordinary compositing |
+| White transparent PNG, 8 / 16 bit | White pigment with alpha = grayscale; light overlays |
+| Optional normal PNG, RGB 8 bit | Tangent-space directions, OpenGL +Y or DirectX −Y; import as non-color data |
+| Paired ZIP | Texture, normal and an output manifest |
+
+The default is an 8-bit grayscale PNG with normal output disabled. Export sizes are 128–4096 px; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
+
+![Additional texture families](docs/images/texture-families.png)
+
+Paper and stone presets are procedural style simulations, not physical scans.
+
+Limits: eight layers, four imported sources, 5 MB per source and 25 MB per project. Imported sources decode at up to 1024 px on the longest edge; enlarging cannot recover detail. Transparent source areas use middle gray. Periodic blending changes the input; disabling it removes the seamless guarantee. High-detail 4K rendering can take longer. Periodicity does not eliminate perceptible repetition.
+
+No colored material channels, 3D viewport, node editor or model baking is included. See [implementation and boundaries](docs/material-studio.md).
+
+### Graphic and motion workspace
+
+Open the lower-left link or `?studio=pattern` for the existing 0.2.0 workflow. Opening an older `.texture.json` routes to this workspace.
+
+- Circles, ellipses, short lines and fragments with independent density, size, color and opacity.
+- Multiple layers with visibility, locking, duplication, ordering and blend modes.
+- Safe SVG import, manual placement and dragging, transforms, recoloring, weighted automatic scattering.
+- Random, grid, staggered and clustered layouts; spacing, directional gradients and jitter.
+- Separate seeded random streams and parameter locks; regeneration preserves manual objects.
+- Periodic edge copies and neighbor-aware spacing, unit editing and 3 × 3 tiled preview.
+- Rectangle, ellipse and SVG alpha masks, including exclusion regions.
+- Drift, wandering, directional flow, rotation and breathing loops; playback and time scrubbing.
+- Project files, embedded original assets, undo / redo, local recovery and parameter presets.
+- Checkerboard, light, dark and custom preview backgrounds; tile boundaries and zoom.
+
+Import, rendering and export run locally. The original raster/base-image workflow remains accessible through the top-bar **底图阵列** button.
+
+### Exports
+
+| Format | Output |
+| --- | --- |
+| PNG | Current frame, optional full Alpha transparency |
+| JPEG | Current frame with the chosen canvas background |
+| Pure SVG | Editable vector structure; rejects raster images, fonts and filters |
+| Effects SVG | Sanitized SVG effects, with explicit compatibility notices |
+| Optimized SVG | Reuses custom vector structures through definitions and references |
+| PNG sequence ZIP | Transparent looping frames plus a timing and import manifest |
+
+Choose the canvas, a selection, a seamless unit or a filled pattern. Export checks report size, object count, transparency and loop state. Generation supports progress, cancellation and retry.
+
+SVG source files are retained. Scripts and external references are removed; unsupported elements and complex styles are reported. Text should be outlined before import. Blend modes, fonts and filters still require verification in the target design software.
+
+Seamless drift uses eight snapped directions and integer tile journeys; duration and cycle count control speed without reseeding the layout. Spacing is conservative and constraints can reduce the resulting count. Continuous monochrome noise is available in the main workspace. Path layouts, transparent video, PDF and animated SVG remain future work.
+
+Limits: 64–4096 px canvas, 16 layers, 32 SVG assets, 20,000 generated particles and 2,000 manual objects. SVG inputs are limited to 5 MB each and projects to 25 MB. Static raster export supports up to 16 MP / 8192 px; sequences support 4 MP per frame, 720 frames and a 256 MB ZIP. Large or complex SVGs can still be expensive to render.
+
+### Run locally
+
+Use Node.js 20 / 22 and npm 10+.
+
+```bash
+git clone https://github.com/FishXIN/Texture_Generator.git
+cd Texture_Generator
+npm ci
+npm run dev:web
+```
+
+```bash
+npm run dev                       # Electron studio
+npm run typecheck
+npm run build
+npx playwright install chromium
+npm test
+npm run dist:mac                  # On Windows: npm run dist:win
+```
+
+Nineteen Playwright scenarios cover all preset fields/gradients, dedicated controls, old-project defaults, true 16-bit PNG and black/white alpha data, normal conventions, reproducibility and the existing graphics/motion workflow.
+
+Project architecture: `src/app` routes the workspaces; `features/material` owns monochrome fields, Worker generation, PNG encoding and the 2D editor; `project`, `assets`, `texture` and `export` retain the graphics/motion workflow. See [architecture](docs/architecture.md) and [contributing](CONTRIBUTING.md).
+
+### License
+
+[MIT](LICENSE)
+
+---
+
+## 简体中文
 
 面向设计师的本地黑白纹理制作工具：制作纸张颗粒、斑驳、纤维、裂纹等无缝素材，用于平面设计正片叠底、透明叠加或灰度蒙版，也可按需导出法线。直接预览二维素材，不需要 3D 场景。
 
-[English](README.en.md) · [产品策划](docs/product-plan.md) · [能力对照](docs/texture-coverage.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [变更记录](CHANGELOG.md) · [已发布安装包](https://github.com/FishXIN/Texture_Generator/releases)
+[English](#english) · [产品策划](docs/product-plan.md) · [能力对照](docs/texture-coverage.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [变更记录](CHANGELOG.md) · [已发布安装包](https://github.com/FishXIN/Texture_Generator/releases)
 
 > 主分支为 **0.4.0** 工作台源码。GitHub Releases 中的旧版安装包仍是旧功能，以附件版本为准。
 
 ![黑白纹理工作台实际界面](docs/images/texture-studio.png)
 
-## 黑白纹理工作台
+### 黑白纹理工作台
 
 默认打开黑白素材画布。内置 **31 个可编辑预设**，可以按分类筛选或搜索：
 
@@ -50,7 +160,7 @@
 
 不包含彩色材质、3D 预览、节点编辑器或模型烘焙。用于高度 / 法线时请按 Non-Color 数据读取；目标软件的导入设置仍需核对。[实现与边界](docs/material-studio.md)。
 
-## 图形与动态工作台
+### 图形与动态工作台
 
 通过左下角入口或 `?studio=pattern` 打开既有 0.2.0 工作流；旧 `.texture.json` 项目自动转到这个入口。
 
@@ -70,7 +180,7 @@
 
 所有导入、渲染与导出均在本机处理，作品不上传服务器。内置预设可继续修改，也可以保存自己的参数预设。
 
-### 图形与动态导出
+#### 图形与动态导出
 
 | 出口 | 结果与边界 |
 | --- | --- |
@@ -93,7 +203,7 @@
 
 规模限制：画布 64–4096 px，16 图层、32 SVG 素材、20,000 自动颗粒、2,000 手工对象；单个 SVG 5 MB，项目 25 MB。静态位图最多 16 MP / 8192 px；序列每帧最多 4 MP、720 帧、ZIP 256 MB。复杂 SVG 或高密度作品仍可能较慢，编辑预览降采样不会改变种子与排列。详见[开发与验收](docs/development.md)。
 
-### 图形与动态制作流程
+#### 图形与动态制作流程
 
 1. 选择预设或新建项目，设定画布与无缝模式。
 2. 生成颗粒，或导入 SVG 后选择「放置」「散布」。
@@ -102,7 +212,7 @@
 5. 开启运动并播放，或定位到需要的静态帧。
 6. 保存 `.texture.json` 项目，再选择用途导出。
 
-## 本地运行
+### 本地运行
 
 推荐 Node.js 20 / 22、npm 10+。
 
@@ -124,7 +234,7 @@ npm run dist:mac   # macOS 安装包；Windows 使用 dist:win
 
 安装包输出到 `release/`，不提交到源码仓库。19 项浏览器验收涵盖全部预设的周期灰度与梯度、参数有效性、旧项目兼容、种子和分辨率一致、真实 16 位 PNG / 黑白 Alpha、法线方向，以及原有图形、SVG 和动态输出。[环境与证书说明](docs/development.md)。
 
-## 目录
+### 目录
 
 ```text
 Texture_Generator/
@@ -145,6 +255,6 @@ Texture_Generator/
 
 模块职责见[架构说明](docs/architecture.md)。贡献前请阅读 [CONTRIBUTING](CONTRIBUTING.md)，问题与素材兼容反馈请提交到 [Issues](https://github.com/FishXIN/Texture_Generator/issues)。
 
-## License
+### 许可
 
 [MIT](LICENSE)
