@@ -6,8 +6,9 @@ All notable changes to this project are documented in this file.
 
 ### Reference UI styling
 
-- Unified the workbench, legacy project workspace, menus and export dialogs around a shared pale blue-gray palette with white surfaces and a `#4e5df5` accent.
-- Added 12 px panel corners, thin control borders, consistent Chinese typography and restrained hover/selection states. Compact layouts preserve the central canvas and scrollable contextual controls.
+- Matched the supplied Figma CSS with `#f7f7f9` surfaces, `#0b0b0f` headings, `#787c91` labels, `#3f3f51` values, 12 px corners and 20 px panel padding across the workbench and legacy project workspace.
+- Used 32 px outlined buttons with 6 px corners and `#e1e4f2` borders, 12/20 px labels, 16/24 px values and solid/dashed `#c9cbd4` dividers. Menus and 550 px export dialogs share the same styling.
+- Compact layouts preserve the central canvas and scrollable contextual controls.
 - Kept damped slider interaction and continuous canvas updates; native range styling excludes custom sliders so their full pointer area is preserved.
 
 ### 0.6.0 Unified minimal workbench
