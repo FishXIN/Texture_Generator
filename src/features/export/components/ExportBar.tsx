@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { StudioSelect } from '@/shared/ui/StudioSelect';
 import { cn } from '@/shared/lib/cn';
 import { exportSvgString } from '../svgExporter';
 import { renderScene } from '@/features/texture/engine/canvasRenderer';
@@ -138,16 +139,17 @@ export function ExportBar({ baseAsset, elements, placements }: ExportBarProps) {
         </label>
         <label className="space-y-2 text-ui-sm">
           <span className="font-medium">倍率</span>
-          <select
-            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-ui-sm"
+          <StudioSelect
+            label="倍率"
+            className="w-full"
             value={scale}
             disabled={format === 'svg'}
-            onChange={(event) => setScale(Number(event.target.value))}
+            onChange={value => setScale(Number(value))}
           >
             <option value={1}>1x</option>
             <option value={2}>2x</option>
             <option value={3}>3x</option>
-          </select>
+          </StudioSelect>
         </label>
       </div>
       <Button className="w-full" onClick={handleExport} disabled={!canExport}>

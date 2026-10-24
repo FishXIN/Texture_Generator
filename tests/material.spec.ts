@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import {choose} from './select';
 import { readFile } from 'node:fs/promises';
 import { inflateSync } from 'node:zlib';
 
@@ -110,7 +111,7 @@ test('2D interface saves and reopens, cancels 4K export and retries a transparen
   await expect(page.getByRole('button',{name:'3D 表面'})).toHaveCount(0);
   await expect(page.getByRole('heading',{name:'3D 预览'})).toHaveCount(0);
   await page.getByRole('button',{name:/02 颗粒斑点/}).click();
-  await page.getByLabel('画布底色',{exact:true}).selectOption('transparent');
+  await choose(page.getByLabel('画布底色',{exact:true}),'transparent');
   await expect(page.getByLabel('透明检查底色')).toBeVisible();
   await page.getByLabel('纹理项目名称').fill('测试黑色颗粒');
   await page.getByRole('button',{name:'项目菜单'}).click();
@@ -122,12 +123,12 @@ test('2D interface saves and reopens, cancels 4K export and retries a transparen
   await expect(page.getByLabel('纹理项目名称')).toHaveValue('测试黑色颗粒');
   await page.getByRole('button',{name:'导出',exact:true}).click();
   const dialog=page.getByRole('dialog');
-  await dialog.getByLabel('素材尺寸').selectOption('4096');
+  await choose(dialog.getByLabel('素材尺寸'),'4096');
   await dialog.getByRole('button',{name:'下载素材'}).click();
   await expect(dialog.getByRole('button',{name:'取消生成'})).toBeVisible();
   await dialog.getByRole('button',{name:'取消生成'}).click();
   await expect(dialog.getByText('已取消，可继续调整并重新导出。',{exact:true})).toBeVisible();
-  await dialog.getByLabel('素材尺寸').selectOption('512');
+  await choose(dialog.getByLabel('素材尺寸'),'512');
   const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'下载素材'}).click();
   const file=await download, data=readPng(await readFile((await file.path())!));
   expect([data.size,data.depth,data.color]).toEqual([512,8,4]);
@@ -237,29 +238,29 @@ test('white transparent light retains straight white channels and 8/16-bit alpha
 });
 
 test('category and search find paper/marble/pop/light presets and soft glow downloads as white alpha',async({page})=>{
-  await page.getByLabel('纹理分类').selectOption('paper');
+  await choose(page.getByLabel('纹理分类'),'paper');
   await page.getByLabel('搜索纹理预设').fill('宣纸');
   await expect(page.locator('.material-preset')).toHaveCount(1);
   await page.getByRole('button',{name:/11 宣纸/}).click();
   await expect(page.getByLabel('密度',{exact:true})).toBeVisible();
   await page.getByLabel('搜索纹理预设').fill('大理石');
   await expect(page.getByText('没有匹配的纹理',{exact:true})).toBeVisible();
-  await page.getByLabel('纹理分类').selectOption('surface');
+  await choose(page.getByLabel('纹理分类'),'surface');
   await expect(page.locator('.material-preset')).toHaveCount(3);
   await page.getByRole('button',{name:/20 白大理石/}).click();
   await expect(page.getByLabel('尺度',{exact:true})).toBeVisible();
   await page.getByLabel('搜索纹理预设').fill('');
-  await page.getByLabel('纹理分类').selectOption('graphic');
+  await choose(page.getByLabel('纹理分类'),'graphic');
   await page.getByRole('button',{name:/23 波普网点/}).click();
   await expect(page.getByLabel('密度',{exact:true})).toBeVisible();
-  await page.getByLabel('纹理分类').selectOption('light');
+  await choose(page.getByLabel('纹理分类'),'light');
   await page.getByRole('button',{name:/28 柔光/}).click();
   await expect(page.getByLabel('柔和度',{exact:true})).not.toBeVisible();
-  await page.getByLabel('画布底色',{exact:true}).selectOption('transparent');
-  await expect(page.getByLabel('纹理颜色')).toHaveValue('white');
-  await page.getByLabel('透明检查底色').selectOption('dark');
+  await choose(page.getByLabel('画布底色',{exact:true}),'transparent');
+  await expect(page.getByLabel('纹理颜色')).toHaveAttribute('data-value','white');
+  await choose(page.getByLabel('透明检查底色'),'dark');
   await page.getByRole('button',{name:'导出',exact:true}).click();
-  const dialog=page.getByRole('dialog');await dialog.getByLabel('素材尺寸').selectOption('128');
+  const dialog=page.getByRole('dialog');await choose(dialog.getByLabel('素材尺寸'),'128');
   const downloaded=page.waitForEvent('download');await dialog.getByRole('button',{name:'下载素材'}).click();
   const file=await downloaded,data=readPng(await readFile((await file.path())!));
   expect(file.suggestedFilename()).toContain('White_Alpha');expect(data.color).toBe(4);

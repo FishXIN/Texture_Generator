@@ -1,6 +1,7 @@
 import { algorithms } from './algorithms';
 import type { Algorithm, Point } from './algorithms';
 import { additionalPresets } from './presets';
+import { EXPORT_SIZES, MAX_CANVAS_SIZE } from './dimensions';
 
 export const particleShapes = {
   circle:'圆点', ellipse:'椭圆', blob:'有机斑点', square:'方块', polygon:'多边形', line:'短线',
@@ -312,11 +313,11 @@ export function parseMaterial(text: string): MaterialProject {
   }
   if(p.timeline===undefined)p.timeline={duration:3,fps:24,phase:0};
   if(p.canvas===undefined)p.canvas={width:p.export.size,height:p.export.size};
-  object(p.canvas);num(p.canvas.width,1,8192,true);num(p.canvas.height,1,8192,true);
+  object(p.canvas);num(p.canvas.width,1,MAX_CANVAS_SIZE,true);num(p.canvas.height,1,MAX_CANVAS_SIZE,true);
   object(p.timeline);num(p.timeline.duration,.25,30);num(p.timeline.fps,1,60,true);num(p.timeline.phase,0,1);
   object(p.normal); num(p.normal.strength, 0, 2); choice(p.normal.convention, ['opengl', 'directx']);
-  object(p.export); num(p.export.size, 128, 4096, true);
-  if (![128, 256, 512, 1024, 2048, 4096].includes(p.export.size)) throw new Error('导出尺寸不支持');
+  object(p.export); num(p.export.size, 128, MAX_CANVAS_SIZE, true);
+  if (!EXPORT_SIZES.some(size => size === p.export.size)) throw new Error('导出尺寸不支持');
   if (![8, 16].includes(p.export.depth)) throw new Error('高度位深不支持');
   choice(p.export.maps, ['both', 'height', 'normal']);
   choice(p.export.background, ['white', 'transparent']);

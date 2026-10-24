@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import {choose} from './select';
 import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
@@ -268,7 +269,7 @@ test('UI supports SVG placement, drag, locks, undo, project download and reopen'
   const pngDownload = page.waitForEvent('download'); await page.getByRole('button', { name: '导出并保存' }).click();
   expect((await pngDownload).suggestedFilename()).toBe('验收纹理_unit.png');
   await expect(page.getByText('导出完成', { exact: true })).toBeVisible();
-  await page.getByRole('combobox',{name:'文件格式'}).selectOption('sequence');
+  await choose(page.getByRole('combobox',{name:'文件格式'}),'sequence');
   await page.getByRole('spinbutton',{name:'帧率数值',exact:true}).fill('4');
   const zipDownload=page.waitForEvent('download');await page.getByRole('button',{name:'导出并保存'}).click();
   const zipPath=testInfo.outputPath('sequence.zip');await (await zipDownload).saveAs(zipPath);

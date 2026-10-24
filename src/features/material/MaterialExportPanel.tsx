@@ -8,6 +8,7 @@ import { materialTask } from './workerClient';
 import type { MaterialTaskOptions } from './workerClient';
 import { vectorIssues } from './vector';
 import { outputDimensions } from './composition';
+import { EXPORT_SIZES } from './dimensions';
 
 export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
   const s = useMaterialStore(), p = s.project;
@@ -60,9 +61,12 @@ export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
           <option value="png">PNG</option><option value="sequence">PNG 序列</option>
           <option value="pure">矢量 SVG</option><option value="optimized">优化 SVG</option><option value="effect">保留效果 SVG</option>
         </SelectField>
+        {!svg&&<SelectField label="贴图类型" value={p.export.maps} disabled={busy} onChange={v=>s.edit(p=>{p.export.maps=v as typeof p.export.maps;})}>
+          <option value="height">{composite?'画布素材':'黑白 / 透明素材'}</option><option value="normal">法线贴图</option><option value="both">素材＋法线（ZIP）</option>
+        </SelectField>}
         {p.layers.some(l=>l.role==='background')&&<SelectField label="导出内容" value={p.export.scope} disabled={busy} onChange={v=>s.edit(p=>{p.export.scope=v as typeof p.export.scope;})}><option value="canvas">整个画布</option><option value="material">仅素材 · 不含背景图</option></SelectField>}
         <SelectField label="素材尺寸" value={String(p.export.size)} disabled={busy} onChange={v => s.edit(p => { p.export.size = Number(v); })}>
-          {[128,256,512,1024,2048,4096].map(v => {const d=outputDimensions(p,v);return <option key={v} value={v}>{d.width} × {d.height}</option>;})}
+          {EXPORT_SIZES.map(v => {const d=outputDimensions(p,v);return <option key={v} value={v}>{d.width} × {d.height}</option>;})}
         </SelectField>
         {p.export.maps !== 'normal' && <>
           <SelectField label="画布底色" value={p.export.background} disabled={busy} onChange={v => s.edit(p => { p.export.background = v as typeof p.export.background; })}><option value="white">白色</option><option value="transparent">透明</option></SelectField>
@@ -72,10 +76,9 @@ export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
       {format==='effect'&&<p className="material-help">包含嵌入的图片，保留画布效果。</p>}
       {issues.length>0&&<p className="material-help">{issues.join('；')}。可选择「保留效果 SVG」。</p>}
       <details><summary>高级设置</summary>
-        {!svg&&<SelectField label="输出通道" value={p.export.maps} disabled={busy} onChange={v=>s.edit(p=>{p.export.maps=v as typeof p.export.maps;})}><option value="height">画布素材</option><option value="normal">法线</option><option value="both">素材与法线</option></SelectField>}
         {!vector&&p.export.maps!=='normal'&&!composite&&<SelectField label="灰度位深" value={String(p.export.depth)} disabled={busy} onChange={v=>s.edit(p=>{p.export.depth=Number(v) as 8|16;})}><option value="8">8 位</option><option value="16">16 位</option></SelectField>}
-        {composite&&<p className="material-help">上传素材保留原色，导出为 8 位 RGBA。</p>}
-        {p.export.background==='transparent'&&<SelectField label="纹理颜色" value={p.export.pigment} disabled={busy} onChange={v=>s.edit(p=>{p.export.pigment=v as 'black'|'white';})}><option value="black">黑色</option><option value="white">白色</option></SelectField>}
+        {composite&&p.export.maps!=='normal'&&<p className="material-help">上传素材保留原色，导出为 8 位 RGBA。</p>}
+        {p.export.background==='transparent'&&p.export.maps!=='normal'&&<SelectField label="纹理颜色" value={p.export.pigment} disabled={busy} onChange={v=>s.edit(p=>{p.export.pigment=v as 'black'|'white';})}><option value="black">黑色</option><option value="white">白色</option></SelectField>}
         {p.export.maps!=='height'&&<>
           <Field label="法线强度" value={p.normal.strength} min={0} max={2} step={.01} disabled={busy} onChange={v=>s.edit(p=>{p.normal.strength=v;},'normal')}/>
           <SelectField label="法线格式" value={p.normal.convention} disabled={busy} onChange={v=>s.edit(p=>{p.normal.convention=v as typeof p.normal.convention;})}><option value="opengl">OpenGL</option><option value="directx">DirectX</option></SelectField>

@@ -19,7 +19,7 @@ scope.onmessage = async event => {
       const output=await exportSequence(project,size,sources,progress=>scope.postMessage({type:'progress',progress}));
       scope.postMessage({type:'export',output});return;
     }
-    const maps = renderMaterial(project, size, sources, progress => scope.postMessage({ type: 'progress', progress: progress * (exporting ? 0.8 : 1) }),phase,preview);
+    const maps = renderMaterial(project, size, sources, progress => scope.postMessage({ type: 'progress', progress: progress * (exporting ? 0.8 : 1) }),phase,preview,exporting?format==='effect'?'height':project.export.maps:'both');
     if (exporting) {
       const output = format==='effect'?vectorOutput(project,await effectSvg(project,maps),'effect'):await exportMaterial(project, maps, progress => scope.postMessage({ type: 'progress', progress: 0.8 + progress * 0.2 }));
       scope.postMessage({ type: 'export', output });

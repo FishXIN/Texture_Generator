@@ -13,7 +13,7 @@ export async function exportSequence(p:MaterialProject,size:number,sources:Decod
   if(frames*dims.width*dims.height>128_000_000)throw new Error('序列总像素超过本机打包上限，请降低尺寸、时长或帧率。');
   const files:{name:string;data:Uint8Array}[]=[],name=materialFilename(p);
   for(let frame=0;frame<frames;frame++){
-    const phase=frame/frames,maps=renderMaterial(p,size,sources,v=>progress?.((frame+v*.8)/frames),phase),id=String(frame).padStart(5,'0');
+    const phase=frame/frames,maps=renderMaterial(p,size,sources,v=>progress?.((frame+v*.8)/frames),phase,false,p.export.maps),id=String(frame).padStart(5,'0');
     if(p.export.maps!=='normal')files.push({name:`${name}_${id}.png`,data:await encodePng(maps,'height',p.export.depth,p.export.background==='transparent',p.export.pigment)});
     if(p.export.maps!=='height')files.push({name:`${name}_Normal_${id}.png`,data:await encodePng(maps,'normal',8)});
     progress?.((frame+1)/frames);

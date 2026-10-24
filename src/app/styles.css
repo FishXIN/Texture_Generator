@@ -16,8 +16,8 @@
   --brand-soft: #e8e8ee;
   --hover-bg: #ededf2;
   --chip-bg: #ebebf0;
-  --line: #c9cbd4;
-  --line-dash: #c9cbd4;
+  --line: #e4e5eb;
+  --line-dash: #e4e5eb;
   --control-line: #e1e4f2;
   --entry-line: #e1e3ea;
   --entry-outline: #dde2e9;
@@ -240,7 +240,7 @@
 .param-field {display:block;margin-bottom:19px}
 .field-label {display:flex;align-items:center;justify-content:space-between;color:var(--text-sub);font-size:12px;line-height:20px;margin-bottom:12px}
 .field-value {display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--text-sub)}
-.field-value input {width:64px;height:24px;background:transparent;border:0;border-bottom:1px solid var(--entry-line);box-shadow:0 0 0 1px var(--entry-outline);border-radius:0;text-align:right;color:var(--control-text);padding:0 8px;font:200 16px/24px var(--font-number)}
+.field-value input {width:64px;height:24px;background:transparent;border:0;box-shadow:none;border-radius:0;text-align:right;color:var(--control-text);padding:0 8px;font:200 16px/24px var(--font-number)}
 .field-value input::-webkit-inner-spin-button {appearance:none}
 .select-field {display:flex;align-items:center;justify-content:space-between;color:var(--text-sub);font-size:12px;margin:0 0 20px;gap:12px}
 .select-field select {height:32px;border:1px solid var(--control-line);background:transparent;border-radius:var(--control-radius);color:var(--control-text);padding:5px 8px;max-width:155px;font-size:13px;line-height:22px}
@@ -284,3 +284,8 @@
 @media(min-width:1500px){.studio-workspace{grid-template-columns:258px minmax(360px,1fr) 300px}.studio-header{padding-left:30px}.studio-brand{flex-basis:240px}}
 @media(max-width:1100px){.studio-workspace{grid-template-columns:210px minmax(330px,1fr) 258px}.studio-header{gap:12px;padding:0 17px}.studio-brand{flex-basis:190px}.header-actions{gap:9px}.project-title>span,.legacy-link,.studio-status>span:last-child{display:none}.canvas-toolbar{padding:8px 12px;height:auto;flex-wrap:wrap}.preview-controls{gap:5px}.segmented button{padding:7px 9px}}
 @media(prefers-reduced-motion:reduce){.studio button,.export-dialog button{transition:none}}
+.studio input:not([type=range]):not([type=checkbox]):not([type=file]),.studio select,.export-dialog input:not([type=range]):not([type=checkbox]),.export-dialog select{border:0;box-shadow:none}
+.studio input:focus-visible,.studio select:focus-visible,.export-dialog input:focus-visible,.export-dialog select:focus-visible{outline:none}
+.studio-header,.library-tabs,.canvas-toolbar,.inspector .panel-heading,.inspector-section,.export-header{border-bottom-width:.5px}
+.layer-tools,.studio-asset,.preset-button{border-bottom-width:.5px!important}
+.timeline,.studio-status,.export-checks,.export-footer{border-top-width:.5px}

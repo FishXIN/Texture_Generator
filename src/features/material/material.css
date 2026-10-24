@@ -16,9 +16,9 @@
 .material-studio button.material-primary{background:transparent;color:var(--control-text);height:32px;padding:5px 16px;border:1px solid var(--control-line);border-radius:var(--control-radius);font-size:13px;line-height:22px;font-weight:500}
 .material-studio button.material-primary:hover{background:var(--hover-bg);border-color:var(--line)}
 .material-menu{position:relative}
-.material-menu>div{position:absolute;right:0;top:42px;z-index:15;width:164px;background:var(--m-panel);border:1px solid var(--m-line);border-radius:var(--surface-radius);box-shadow:var(--popup-shadow);padding:6px}
-.material-menu>div button,.material-menu a{display:block;width:100%;text-align:left;padding:9px 10px;font-size:12px;text-decoration:none;color:inherit}
-.material-menu a{border-top:1px solid var(--m-line);font-size:11px;color:var(--m-muted);margin-top:4px}
+.material-menu>div{position:absolute;right:0;top:42px;z-index:15;width:164px;background:var(--m-panel);border:0;border-radius:var(--surface-radius);box-shadow:var(--popup-shadow);padding:6px}
+.material-menu>div button,.material-menu a{display:block;width:100%;min-height:32px;text-align:left;padding:5px 10px;font-size:13px;line-height:22px;text-decoration:none;color:inherit}
+.material-menu a{border-top:.5px solid var(--m-line);font-size:12px;color:var(--m-muted);margin-top:4px;border-radius:var(--control-radius)}
 .material-menu a:hover{background:var(--hover-bg);color:var(--brand)}
 .material-workspace{height:calc(100% - 64px);display:grid;grid-template-columns:252px minmax(280px,1fr) 280px;gap:12px;padding:20px}
 .material-library,.material-inspector,.material-center{border:0;border-radius:var(--surface-radius);background:var(--m-panel);min-height:0}
@@ -30,9 +30,9 @@
 .material-library-tabs button{height:40px;padding:0;border-radius:0;border-bottom:2px solid transparent;font-size:13px;color:var(--m-muted)}
 .material-library-tabs button[aria-selected=true]{color:var(--brand);border-bottom-color:var(--brand);font-weight:500}
 .material-preset-filter{display:flex;gap:8px;padding:20px 20px 12px;flex-shrink:0}
-.material-preset-filter select,.material-preset-filter input{min-width:0;height:32px;background:transparent;border:1px solid var(--control-line);border-radius:var(--control-radius);padding:5px 8px;font-size:12px;color:var(--control-text)}
+.material-preset-filter input{min-width:0;height:32px;background:transparent;border:0;border-radius:var(--control-radius);padding:5px 8px;font-size:12px;color:var(--control-text)}
 .material-preset-filter input{flex:1;width:70px}
-.material-preset-filter select{width:80px}
+.material-preset-filter .studio-select{width:80px;flex-shrink:0;font-size:12px}
 .material-preset-filter input::placeholder{color:var(--text-tertiary)}
 .material-presets{padding:0 20px 20px;display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:12px 8px;overflow:auto;min-height:150px;max-height:49%;flex:1;scrollbar-width:thin;scrollbar-color:var(--line-dash) transparent}
 .material-studio .material-preset{padding:0;flex-direction:column;gap:4px;text-align:left;min-width:0;align-items:stretch;border-radius:var(--control-radius)}
@@ -58,13 +58,16 @@
 .material-canvas-size{position:relative;font:12px/22px var(--font-number);font-variant-numeric:tabular-nums;color:var(--m-muted)}
 .material-canvas-size summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;padding:6px 0}
 .material-canvas-size summary::-webkit-details-marker{display:none}
-.material-canvas-size>div{position:absolute;top:36px;left:0;z-index:10;display:flex;gap:12px;padding:20px;background:var(--m-panel);border:1px solid var(--control-line);border-radius:var(--surface-radius);box-shadow:var(--popup-shadow)}
-.material-canvas-size label{display:flex;align-items:center;gap:6px}
-.material-canvas-size input{width:60px;background:var(--m-panel);border:1px solid var(--control-line);border-radius:var(--control-radius);padding:5px;color:var(--control-text)}
+.material-canvas-size>div{position:absolute;top:36px;left:0;z-index:10;display:flex;flex-direction:column;gap:20px;width:280px;padding:20px;background:var(--m-panel);border:0;border-radius:var(--surface-radius);box-shadow:var(--popup-shadow);font-family:var(--font-ui)}
+.material-canvas-size label{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--m-muted)}
+.material-canvas-size .studio-select{max-width:170px}
+.material-canvas-dimensions{display:flex;gap:20px;border-top:1px dashed var(--line-dash);padding-top:20px}
+.material-canvas-dimensions label{flex:1;min-width:0;gap:8px}
+.material-canvas-size input{width:72px;height:24px;background:transparent;border:0;box-shadow:none;outline:none;padding:0;text-align:right;font:200 16px/24px var(--font-number);color:var(--control-text)}
 .material-tile-controls{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--m-muted)}
 .material-tile-controls button{padding:5px 9px}
 .material-tile-controls button.active{background:var(--brand-soft);color:var(--brand)}
-.material-tile-controls select{background:transparent;border:0;padding:5px;font-size:12px}
+.material-tile-controls .studio-select{font-size:12px}
 .material-stage{position:relative;flex:1;min-height:180px;background:var(--m-bg);overflow:hidden}
 .material-flat{position:absolute;inset:40px;display:flex;align-items:center;justify-content:center;touch-action:none;container-type:size}
 .material-flat .material-map{width:min(100cqw,calc(100cqh * var(--canvas-aspect)));height:min(100cqh,calc(100cqw / var(--canvas-aspect)));object-fit:contain}
@@ -82,11 +85,11 @@
 .material-studio .param-field{display:block;margin:20px 0}
 .material-studio .field-label{display:flex;justify-content:space-between;align-items:center;color:var(--m-muted);font-size:12px;line-height:20px;margin-bottom:4px}
 .material-studio .field-value{display:flex;align-items:baseline;gap:8px;color:var(--m-muted);font-size:12px;font-family:var(--font-number);font-variant-numeric:tabular-nums}
-.material-studio .field-value input{width:64px;height:24px;border:0;border-bottom:1px solid var(--entry-line);box-shadow:0 0 0 1px var(--entry-outline);background:transparent;color:var(--control-text);padding:0 8px;text-align:right;font:200 16px/24px var(--font-number);appearance:textfield;border-radius:0}
-.material-studio .field-value input:hover,.material-studio .field-value input:focus{box-shadow:0 0 0 1px var(--m-muted)}
+.material-studio .field-value input{width:64px;height:24px;border:0;box-shadow:none;outline:none;background:transparent;color:var(--control-text);padding:0 8px;text-align:right;font:200 16px/24px var(--font-number);appearance:textfield;border-radius:0}
+.material-studio .field-value input:focus{color:var(--heading)}
 .material-studio input::-webkit-inner-spin-button{appearance:none}
 .material-studio .select-field{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--m-muted);font-size:12px;margin:20px 0}
-.material-studio .select-field select{max-width:145px;height:32px;background:transparent;color:var(--control-text);border:1px solid var(--control-line);border-radius:var(--control-radius);padding:5px 8px;font-size:13px;line-height:22px}
+.material-studio .select-field .studio-select{max-width:145px}
 .material-studio .toggle-field{display:flex;align-items:center;justify-content:space-between;margin:20px 0;color:var(--m-muted);font-size:12px}
 .material-studio input[type=checkbox]{accent-color:var(--brand);width:13px;height:13px}
 .material-seed{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--m-muted);margin:16px 0}
@@ -111,7 +114,7 @@
 .material-dialog-header h2{font-weight:700;font-size:16px;line-height:24px;color:var(--heading);margin:0}
 .material-dialog-header button{padding:5px}
 .material-export-fields .select-field{margin:20px 0}
-.material-export-fields .select-field select{max-width:235px}
+.material-studio .material-export-fields .select-field .studio-select{max-width:235px}
 .material-dialog-footer{display:flex;justify-content:space-between;border-top:1px dashed var(--line-dash);padding-top:20px;margin-top:20px}
 .material-dialog-footer button{height:32px;padding:5px 16px;font-size:13px;line-height:22px;font-weight:500}
 .material-export-message{min-height:0;font-size:12px;margin:15px 0;color:var(--m-muted)}
@@ -133,3 +136,8 @@
 @media(max-width:900px){.material-workspace{grid-template-columns:190px minmax(240px,1fr) 220px;gap:10px;padding:12px}.material-header{padding-inline:20px}.material-layer-name>span{max-width:92px}.material-upload-actions,.material-preset-filter,.material-presets,.material-assets,.material-inspector section{padding-inline:16px}.material-library-tabs,.material-layer-heading,.material-panel-heading,.material-view-toolbar{margin-inline:16px}.material-inspector section:not(:last-child):after{left:16px;right:16px}}
 @media(max-height:750px){.material-presets,.material-assets{max-height:45%}.material-flat{inset:24px}.material-inspector .param-field{margin:15px 0}}
 @media(prefers-reduced-motion:reduce){.material-studio *{transition:none!important}}
+.material-studio input:not([type=range]):not([type=checkbox]):not([type=file]),.material-studio select{border:0;box-shadow:none}
+.material-studio input:focus-visible,.material-studio select:focus-visible{outline:none}
+.material-header,.material-library-tabs,.material-view-toolbar,.material-panel-heading,.material-dialog-header,.material-recovery{border-bottom-width:.5px}
+.material-layer-heading,.material-inspector details,.material-canvas-dimensions,.material-dialog details,.material-dialog-footer,.material-timeline{border-top-width:.5px}
+.material-inspector section:not(:last-child):after{border-bottom-width:.5px}

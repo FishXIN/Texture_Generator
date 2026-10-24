@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { StudioSelect } from './StudioSelect';
 export function Field({label,value,min,max,step=1,onChange,unit='',disabled=false}:{
   label:string;value:number;min:number;max:number;step?:number;onChange:(v:number)=>void;unit?:string;disabled?:boolean;
 }) {
@@ -56,7 +57,7 @@ export function Field({label,value,min,max,step=1,onChange,unit='',disabled=fals
 export function SelectField({label,value,onChange,children,disabled=false}:{
   label:string;value:string;onChange:(v:string)=>void;children:ReactNode;disabled?:boolean;
 }) {
-  return <label className="select-field"><span>{label}</span><select aria-label={label} value={value} disabled={disabled} onChange={e=>onChange(e.target.value)}>{children}</select></label>;
+  return <label className="select-field"><span>{label}</span><StudioSelect label={label} value={value} disabled={disabled} onChange={onChange}>{children}</StudioSelect></label>;
 }
 export function Toggle({label,checked,onChange,disabled=false}:{
   label:string;checked:boolean;onChange:(v:boolean)=>void;disabled?:boolean;

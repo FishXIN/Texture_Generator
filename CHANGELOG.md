@@ -4,10 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Canvas sizes and unified popups
+
+- Added ten common aspect ratios, resolution shortcuts through 8K and custom canvas dimensions. Resolution choices update both canvas and export sizes.
+- Increased main-workbench PNG export to an 8192 px longest edge, with streamed row compression and unused-channel work omitted.
+- Exposed grayscale/transparent, normal and paired ZIP output directly in the export dialog; normal strength and convention remain in advanced settings.
+- Removed input frames including focus outlines, lightened dividers to `#e4e5eb` at 0.5 px, and replaced system select menus with shared neutral popups. Category, canvas, export and legacy controls support keyboard selection, scrolling and outside dismissal.
+- Added real 8K 16-bit Alpha PNG and normal/ZIP checks, size/project round trips and popup keyboard/focus/dialog coverage. Updated existing scenarios to operate the visible menus.
+
 ### Reference UI styling
 
 - Matched the supplied Figma CSS with `#f7f7f9` surfaces, `#0b0b0f` headings, `#787c91` labels, `#3f3f51` values, 12 px corners and 20 px panel padding across the workbench and legacy project workspace.
-- Used 32 px outlined buttons with 6 px corners and `#e1e4f2` borders, 12/20 px labels, 16/24 px values and solid/dashed `#c9cbd4` dividers. Menus and 550 px export dialogs share the same styling.
+- Used 32 px outlined buttons with 6 px corners and `#e1e4f2` borders, 12/20 px labels and 16/24 px values. Menus and 550 px export dialogs share the same styling.
 - Compact layouts preserve the central canvas and scrollable contextual controls.
 - Kept damped slider interaction and continuous canvas updates; native range styling excludes custom sliders so their full pointer area is preserved.
 

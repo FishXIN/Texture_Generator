@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Copy, Download, Eye, EyeOff, ImagePlus, Layers, LockKeyhole, MoreHorizontal, Pause, Play, Plus, Redo2, Shuffle, Trash2, Undo2, UnlockKeyhole, Upload } from 'lucide-react';
 import { Field, SelectField, Toggle } from '@/shared/ui/StudioFields';
+import { StudioSelect } from '@/shared/ui/StudioSelect';
 import { saveBlob } from '@/features/project/io';
 import { generators, generatorControls, presetGroups, heightLayer, materialId, materialPresets, newMaterial, parseMaterial } from './model';
 import type { Generator, HeightLayer, HeightSource } from './model';
@@ -9,6 +10,7 @@ import { decodeSource, importHeight } from './import';
 import { renderMaterial } from './engine';
 import { MapView } from './TexturePreview';
 import { MaterialExportPanel } from './MaterialExportPanel';
+import { MaterialCanvasSize } from './MaterialCanvasSize';
 import { materialFilename } from './export';
 import { MaterialLayerTools } from './MaterialLayerTools';
 import { createParticles } from './particles';
@@ -176,7 +178,7 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
         </div>
         {library==='textures'?<>
           <div className="material-preset-filter"><input aria-label="搜索纹理预设" placeholder="搜索纹理" value={search} onChange={e=>setSearch(e.target.value)}/>
-            <select aria-label="纹理分类" value={category} onChange={e=>setCategory(e.target.value as keyof typeof presetGroups)}>{Object.entries(presetGroups).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></div>
+            <StudioSelect label="纹理分类" value={category} onChange={v=>setCategory(v as keyof typeof presetGroups)}>{Object.entries(presetGroups).map(([id,name])=><option key={id} value={id}>{name}</option>)}</StudioSelect></div>
           <div className="material-presets">{filtered.map(({entry,preview})=><button key={entry.id} className="material-preset" title={`${entry.subtitle} · Shift 点击叠加`} onClick={e=>applyPreset(entry.id,e.shiftKey)}>
             <MapView maps={preview} label={`${entry.name}预设缩略图`}/><span>{entry.name.replace(/^\d+\s*/,'')}</span>
           </button>)}{!filtered.length&&<p className="material-help">没有匹配的纹理</p>}</div>
@@ -208,13 +210,9 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
       </aside>
       <main className="material-center">
         <div className="material-view-toolbar">
-          <details className="material-canvas-size"><summary>{p.canvas.width} × {p.canvas.height}<ChevronDown size={12}/></summary><div>
-            {(['width','height'] as const).map(key=><label key={key}>{key==='width'?'宽':'高'}<input aria-label={`画布${key==='width'?'宽度':'高度'}`} type="number" min={1} max={8192} value={p.canvas[key]} onChange={e=>{
-              const v=Number(e.target.value);if(Number.isInteger(v)&&v>=1&&v<=8192)s.edit(p=>{p.canvas[key]=v;},`canvas:${key}`);
-            }}/></label>)}
-          </div></details>
+          <MaterialCanvasSize/>
           <div className="material-tile-controls"><button className={tiled?'active':''} aria-pressed={tiled} onClick={()=>setTiled(v=>!v)}>平铺预览</button>
-            {p.export.background==='transparent'&&<select aria-label="透明检查底色" value={checkBackground} onChange={e=>setCheckBackground(e.target.value)}><option value="checker">棋盘格</option><option value="light">白底</option><option value="dark">黑底</option></select>}
+            {p.export.background==='transparent'&&<StudioSelect label="透明检查底色" value={checkBackground} onChange={setCheckBackground}><option value="checker">棋盘格</option><option value="light">白底</option><option value="dark">黑底</option></StudioSelect>}
           </div>
         </div>
         {recovery&&<div className="material-recovery"><span>继续上次编辑？</span><button onClick={()=>{try{s.replace(parseMaterial(localStorage.getItem('texture-material-recovery')!));}catch(e){s.message((e as Error).message);}setRecovery(false);}}>恢复</button><button onClick={()=>setRecovery(false)}>关闭</button></div>}

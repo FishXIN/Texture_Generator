@@ -11,6 +11,7 @@ import { StudioCanvas } from '@/features/texture/components/StudioCanvas';
 import type { PreviewBackground } from '@/features/texture/components/StudioCanvas';
 import { StudioExportPanel } from '@/features/export/components/StudioExportPanel';
 import LegacyEditor from '@/features/texture/components/LegacyEditor';
+import { StudioSelect } from '@/shared/ui/StudioSelect';
 
 export default function PatternStudio() {
   const s=useProjectStore();const p=s.project;
@@ -94,13 +95,13 @@ export default function PatternStudio() {
         <div className="canvas-toolbar">
           <div className="segmented"><button className={!tiled?'active':''} onClick={()=>setTiled(false)}>单元编辑</button><button className={tiled?'active':''} onClick={()=>setTiled(true)}>整面预览</button></div>
           <div className="preview-controls">
-            <select aria-label="预览缩放" value={zoom??'fit'} onChange={e=>setZoom(e.target.value==='fit'?null:Number(e.target.value))}>
+            <StudioSelect label="预览缩放" value={zoom??'fit'} onChange={v=>setZoom(v==='fit'?null:Number(v))}>
               <option value="fit">适配</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="1">100%</option><option value="2">200%</option>
-            </select>
+            </StudioSelect>
             {tiled&&<label><input type="checkbox" checked={boundaries} onChange={e=>setBoundaries(e.target.checked)}/>单元边界</label>}
-            <select aria-label="透明检查背景" value={background} onChange={e=>setBackground(e.target.value as PreviewBackground)}>
+            <StudioSelect label="透明检查背景" value={background} onChange={v=>setBackground(v as PreviewBackground)}>
               <option value="checker">棋盘格</option><option value="light">浅色底</option><option value="dark">深色底</option><option value="custom">自定义底</option>
-            </select>{background==='custom'&&<input type="color" aria-label="预览底色" value={customBackground} onChange={e=>setCustomBackground(e.target.value)}/>}
+            </StudioSelect>{background==='custom'&&<input type="color" aria-label="预览底色" value={customBackground} onChange={e=>setCustomBackground(e.target.value)}/>}
           </div>
         </div>
         {recovery&&<div className="recovery-banner"><span>有上次编辑的本地恢复副本</span><button onClick={()=>{try{s.replace(parseProject(localStorage.getItem('texture-recovery')!));s.message('已恢复上次作品');}catch(e){s.message(e instanceof Error?e.message:'恢复失败');}setRecovery(false);}}>恢复作品</button><button aria-label="关闭恢复提示" onClick={()=>setRecovery(false)}>忽略</button></div>}

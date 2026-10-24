@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {choose} from './select';
 import {readFile} from 'node:fs/promises';
 import {inflateSync} from 'node:zlib';
 
@@ -105,13 +106,13 @@ test('background and colored alpha elements share the canvas with textures and s
   await page.getByRole('button',{name:'导出',exact:true}).click();
   const dialog=page.getByRole('dialog');
   await expect(dialog.getByLabel('灰度位深')).toHaveCount(0);
-  await dialog.getByLabel('导出内容').selectOption('material');await dialog.getByLabel('素材尺寸').selectOption('128');
-  await dialog.getByLabel('画布底色').selectOption('transparent');
+  await choose(dialog.getByLabel('导出内容'),'material');await choose(dialog.getByLabel('素材尺寸'),'128');
+  await choose(dialog.getByLabel('画布底色'),'transparent');
   const downloadPromise=page.waitForEvent('download');await dialog.getByRole('button',{name:'下载素材'}).click();
   const file=await downloadPromise,b=await readFile((await file.path())!);
   expect(b.readUInt32BE(16)).toBe(128);expect(b.readUInt32BE(20)).toBe(64);expect([b[24],b[25]]).toEqual([8,6]);
   const parts:Buffer[]=[];for(let off=8;off<b.length;){const n=b.readUInt32BE(off);if(b.toString('ascii',off+4,off+8)==='IDAT')parts.push(b.subarray(off+8,off+8+n));off+=n+12;}
   const raw=inflateSync(Buffer.concat(parts));expect(raw.length).toBe((128*4+1)*64);
-  await dialog.getByLabel('导出格式').selectOption('pure');await expect(dialog.getByRole('button',{name:'下载素材'})).toBeDisabled();
-  await dialog.getByLabel('导出格式').selectOption('effect');await expect(dialog.getByRole('button',{name:'下载素材'})).toBeEnabled();
+  await choose(dialog.getByLabel('导出格式'),'pure');await expect(dialog.getByRole('button',{name:'下载素材'})).toBeDisabled();
+  await choose(dialog.getByLabel('导出格式'),'effect');await expect(dialog.getByRole('button',{name:'下载素材'})).toBeEnabled();
 });

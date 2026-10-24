@@ -382,17 +382,18 @@ export function encodeNormal(du: number, dv: number, strength: number, directX: 
   out[offset + 1] = directX ? 255 - g : g;
   out[offset + 2] = Math.round((inv * 0.5 + 0.5) * 255); out[offset + 3] = 255;
 }
-export function renderMaterial(p: MaterialProject, size: number, sources: DecodedSource[] = [], progress?: (v: number) => void,phase=p.timeline?.phase??0,preview=false): MaterialMaps {
+export function renderMaterial(p: MaterialProject, size: number, sources: DecodedSource[] = [], progress?: (v: number) => void,phase=p.timeline?.phase??0,preview=false,channels:MaterialProject['export']['maps']='both'): MaterialMaps {
   const dims=outputDimensions(p,size),w=dims.width,h=dims.height;
-  const sample = createSampler(p, sources,phase,preview), t = scratch(), height = new Float32Array(w * h), normal = new Uint8ClampedArray(w * h * 4);
+  const needsNormal=!preview&&channels!=='height';
+  const sample = createSampler(p, sources,phase,!needsNormal), t = scratch(), height = new Float32Array(w * h), normal = new Uint8ClampedArray(needsNormal?w * h * 4:0);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       sample(x / w, y / h, t); const k = y * w + x;
-      height[k] = t.h; if(!preview)encodeNormal(t.du, t.dv, p.normal.strength, p.normal.convention === 'directx', normal, k * 4);
+      height[k] = t.h; if(needsNormal)encodeNormal(t.du, t.dv, p.normal.strength, p.normal.convention === 'directx', normal, k * 4);
     }
     if (y % 32 === 0) progress?.(y / h);
   }
   const compositionLayers=p.layers.filter(l=>l.visible&&l.opacity>0&&(p.export.scope!=='material'||l.role!=='background'));
-  const composition=compositionLayers.some(l=>l.role&&l.role!=='texture')?renderComposition({...p,layers:compositionLayers},w,h,sources,phase,l=>layerField(l,sources,phase,Math.round(p.timeline.duration*p.timeline.fps),true)):undefined;
+  const composition=channels!=='normal'&&compositionLayers.some(l=>l.role&&l.role!=='texture')?renderComposition({...p,layers:compositionLayers},w,h,sources,phase,l=>layerField(l,sources,phase,Math.round(p.timeline.duration*p.timeline.fps),true)):undefined;
   progress?.(1); return { size, height, normal, width:w, pixelHeight:h, composition };
 }

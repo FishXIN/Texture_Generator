@@ -15,7 +15,9 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 ### Monochrome textures
 
 - One flat workspace combines monochrome textures, uploaded backgrounds and colored PNG/SVG elements in the same layer stack. Applying presets preserves uploaded artwork.
-- Common adjustments appear first. Algorithms, seeds and optional normal output are tucked into advanced settings.
+- Common adjustments appear first. Algorithms and seeds stay in advanced settings; normal maps are directly selectable in the export dialog.
+- Borderless controls, faint dividers and consistent neutral popups throughout both workspaces.
+- Canvas shortcuts include square, 16:9, 9:16, 4:3 and other common ratios, with 1K / 2K / 4K / 8K quality choices and custom dimensions.
 - Damped sliders update the canvas while dragging; a persistent worker renders the latest parameters and restores full preview detail on release.
 - Background upload preserves the original aspect ratio. Export the whole canvas or just the materials, excluding the background image; colored compositions use 8-bit RGBA.
 - 119 editable presets across 11 searchable visual groups: grain, fragments, film, paper, nature, painting, surfaces, digital, halftone, graphics and soft light.
@@ -43,7 +45,7 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 | Effects SVG | Explicitly embeds PNG to retain continuous effects |
 | PNG sequence ZIP | Arbitrary-frame loops, optional Alpha / normals, timing manifest |
 
-The default is an 8-bit grayscale PNG with normal output disabled. Export sizes are 128–4096 px; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
+The default is an 8-bit grayscale PNG. Select grayscale/transparent output, a normal map or both directly in the export dialog; normal strength and OpenGL/DirectX settings remain under advanced settings. Export longest edges are 128–8192 px and preserve the canvas ratio; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. PNG compression streams small row blocks to reduce 8K memory use. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
 
 ![Additional texture families](docs/images/texture-families.png)
 
@@ -133,7 +135,9 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 纹理和上传素材共用一个画布、同一组图层。直接上传背景与 PNG / SVG 元素，保留原图颜色和透明度；选择纹理预设不会清空素材。背景上传自动沿用原图比例，可导出完整画布，或仅导出不含背景图的素材。
 
-界面采用浅灰扁平布局，默认展示常用调整；算法、种子、运动细节与法线收进高级设置。滑块带轻阻尼，拖动时中心效果持续更新，松开后恢复清晰预览，一次撤销还原整次拖动。
+界面采用浅灰扁平布局，无框输入、浅细分隔线和统一的下拉菜单与弹窗。默认展示常用调整；算法、种子和运动细节收进高级设置，法线在导出面板直接选择。滑块带轻阻尼，拖动时中心效果持续更新，松开后恢复清晰预览，一次撤销还原整次拖动。
+
+点击画布尺寸，快捷选择 1:1、16:9、9:16、4:3 等常用比例和 1K / 2K / 4K / 8K 清晰度，也可直接输入宽高。清晰度同步导出最长边，尺寸随比例变化。
 
 默认打开黑白素材画布。内置 **119 个可编辑预设、11 个视觉分类**。颗粒、点与碎片、胶片、纸张、自然连续、绘画印刷、表面、数字故障、网点 / 波谱、图形、柔光分别筛选，算法放在高级面板。
 
@@ -182,7 +186,7 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 | 效果 SVG | 明确嵌入 PNG，保留连续灰度 / Alpha |
 | PNG 序列 ZIP | 任意相位循环采样，支持透明和可选法线，附时长 / 帧率说明 |
 
-导出 128–4096 px，预览 512 px；16 位从浮点灰度直接编码，保留超过 256 级的细节。默认导出黑白 8 位 PNG，法线默认关闭。柔光类不透明图可使用滤色或柔光混合，透明白色版可直接增加光晕。透明衬底与预览边界不会写入文件。旧 0.3.0 项目可打开，新参数自动补全。
+导出最长边 128–8192 px，保持画布比例，预览 512 px；16 位从浮点灰度直接编码，保留超过 256 级的细节。默认导出黑白 8 位 PNG；「贴图类型」直接选择黑白 / 透明素材、法线或两者 ZIP，强度与 OpenGL / DirectX 位于高级设置。PNG 分块压缩以降低 8K 内存占用。柔光类不透明图可使用滤色或柔光混合，透明白色版可直接增加光晕。透明衬底与预览边界不会写入文件。旧 0.3.0 项目可打开，新参数自动补全。
 
 最多 16 层、16 个素材、每层 2000 个普通图形，蓝噪 / 最小间距最多 512 个；单个素材 5 MB，项目 25 MB。预览素材解码上限 1024 px；导出重新读取原图细节，SVG 按导出尺寸解码。纯纹理保留真 8 / 16 位灰度，上传素材合成为 8 位 RGBA。序列总像素上限 128 百万。静态预览 512 px，拖动和动态 192 px。上传背景并不自动融合边缘；纹理与元素保留周期平铺逻辑。
 

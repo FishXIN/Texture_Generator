@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import {choose} from './select';
 
 test.beforeEach(async({page})=>{await page.goto('/');});
 
@@ -184,11 +185,11 @@ test('pure SVG pixels match grayscale and clean alpha, including imported SVG an
 });
 
 test('unified UI edits paths, manual placement, imported alpha, animation and vector export with save/undo',async({page})=>{
-  await page.getByLabel('纹理分类').selectOption('pattern');
+  await choose(page.getByLabel('纹理分类'),'pattern');
   await page.getByRole('button',{name:/119 手工编排/}).click();
   await page.getByText('更多调整',{exact:true}).click();
   await page.getByText('图形与分布',{exact:true}).click();
-  await expect(page.getByLabel('分布方式')).toHaveValue('manual');
+  await expect(page.getByLabel('分布方式')).toHaveAttribute('data-value','manual');
   const canvas=page.getByLabel('画布预览'),rect=(await canvas.boundingBox())!;
   await expect.poll(()=>canvas.evaluate((c:HTMLCanvasElement)=>c.width)).toBe(512);
   const before=await page.evaluate(async()=>{const {useMaterialStore}=await import('/src/features/material/store.ts');return useMaterialStore.getState().project.layers[0].objects[0];});
@@ -208,17 +209,17 @@ test('unified UI edits paths, manual placement, imported alpha, animation and ve
   expect(copied).toEqual({count:2,newIds:true,sameOutlines:true});
   await page.getByRole('button',{name:'撤销',exact:true}).click();
   await page.getByText('更多调整',{exact:true}).click();
-  await page.getByText('图层运动',{exact:true}).click();await page.getByLabel('运动方式').selectOption('flow');
+  await page.getByText('图层运动',{exact:true}).click();await choose(page.getByLabel('运动方式'),'flow');
   await page.getByRole('button',{name:'播放纹理'}).click();await expect(page.getByRole('button',{name:'暂停纹理'})).toBeVisible();
-  await page.getByRole('button',{name:'暂停纹理'}).click();await page.getByLabel('运动方式').selectOption('none');
+  await page.getByRole('button',{name:'暂停纹理'}).click();await choose(page.getByLabel('运动方式'),'none');
   await page.getByRole('button',{name:'导出',exact:true}).click();
-  const dialog=page.getByRole('dialog');await dialog.getByText('高级设置',{exact:true}).click();await dialog.getByLabel('输出通道').selectOption('normal');
-  await dialog.getByLabel('导出格式').selectOption('optimized');
-  await expect(dialog.getByLabel('输出通道')).toHaveCount(0);await expect(dialog.getByLabel('灰度位深')).toHaveCount(0);
+  const dialog=page.getByRole('dialog');await dialog.getByText('高级设置',{exact:true}).click();await choose(dialog.getByLabel('贴图类型'),'normal');
+  await choose(dialog.getByLabel('导出格式'),'optimized');
+  await expect(dialog.getByLabel('贴图类型')).toHaveCount(0);await expect(dialog.getByLabel('灰度位深')).toHaveCount(0);
   const downloaded=page.waitForEvent('download');await dialog.getByRole('button',{name:'下载素材'}).click();
   expect((await downloaded).suggestedFilename()).toContain('optimized.svg');await dialog.getByRole('button',{name:'返回编辑'}).click();
   await page.getByText('图形与分布',{exact:true}).click();
-  await page.getByLabel('分布方式').selectOption('path');await expect(page.getByLabel('路径 1 X')).toBeVisible();
+  await choose(page.getByLabel('分布方式'),'path');await expect(page.getByLabel('路径 1 X')).toBeVisible();
   await page.getByLabel('路径 1 X').fill('0.15');await expect(page.getByLabel('路径 1 X')).toHaveValue('0.15');
   const path=await page.evaluate(async()=>{const {useMaterialStore}=await import('/src/features/material/store.ts');return useMaterialStore.getState().project.layers[0].path[0].x;});expect(path).toBe(.15);
 });
