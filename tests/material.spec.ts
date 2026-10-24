@@ -5,7 +5,7 @@ import { inflateSync } from 'node:zlib';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: '纹理工作台', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Texture Generator', exact: true })).toBeVisible();
 });
 
 test('periodic fields and their gradients remain continuous with warp, direction and mixed layers', async ({ page }) => {
@@ -108,19 +108,22 @@ test('PNG exports contain actual 16-bit grayscale and clean black alpha with ind
 
 test('2D interface saves and reopens, cancels 4K export and retries a transparent PNG', async ({page})=>{
   await expect(page.getByLabel('画布预览')).toBeVisible();
+  await expect(page.locator('.material-header').getByLabel('纹理项目名称')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'3D 表面'})).toHaveCount(0);
   await expect(page.getByRole('heading',{name:'3D 预览'})).toHaveCount(0);
   await page.getByRole('button',{name:/02 颗粒斑点/}).click();
   await choose(page.getByLabel('画布底色',{exact:true}),'transparent');
   await expect(page.getByLabel('透明检查底色')).toBeVisible();
-  await page.getByLabel('纹理项目名称').fill('测试黑色颗粒');
   await page.getByRole('button',{name:'项目菜单'}).click();
+  await page.getByLabel('纹理项目名称').fill('测试黑色颗粒');
   const save=page.waitForEvent('download');await page.getByRole('button',{name:'保存项目',exact:true}).click();
   const saved=await save, path=await saved.path();expect(path).toBeTruthy();
   await page.getByRole('button',{name:'项目菜单'}).click();
   await page.getByRole('button',{name:'新建项目',exact:true}).click();
   await page.locator('input[type=file]').first().setInputFiles(path!);
+  await page.getByRole('button',{name:'项目菜单'}).click();
   await expect(page.getByLabel('纹理项目名称')).toHaveValue('测试黑色颗粒');
+  await page.getByRole('button',{name:'项目菜单'}).click();
   await page.getByRole('button',{name:'导出',exact:true}).click();
   const dialog=page.getByRole('dialog');
   await choose(dialog.getByLabel('素材尺寸'),'4096');

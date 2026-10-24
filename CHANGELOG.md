@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 
 ### Reference UI styling
 
+- Simplified the main header to “Texture Generator” and moved project naming into the project menu.
 - Matched the supplied Figma CSS with `#f7f7f9` surfaces, `#0b0b0f` headings, `#787c91` labels, `#3f3f51` values, 12 px corners and 20 px panel padding across the workbench and legacy project workspace.
 - Used 32 px outlined buttons with 6 px corners and `#e1e4f2` borders, 12/20 px labels and 16/24 px values. Menus and 550 px export dialogs share the same styling.
 - Compact layouts preserve the central canvas and scrollable contextual controls.

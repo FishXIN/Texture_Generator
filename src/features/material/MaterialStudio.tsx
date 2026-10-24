@@ -147,14 +147,16 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
   };
   return <div className="material-studio">
     <header className="material-header">
-      <h1>纹理工作台</h1>
-      <input className="material-project-title" aria-label="纹理项目名称" value={p.name} onChange={e=>s.edit(p=>{p.name=e.target.value.slice(0,80);},'name')}/>
+      <h1>Texture Generator</h1>
       <div className="material-header-actions">
         <button aria-label="撤销" title="撤销 ⌘Z" disabled={!s.past.length} onClick={s.undo}><Undo2 size={16}/></button>
         <button aria-label="重做" title="重做 ⇧⌘Z" disabled={!s.future.length} onClick={s.redo}><Redo2 size={16}/></button>
         <div className="material-menu">
           <button aria-label="项目菜单" aria-expanded={menu} onClick={()=>setMenu(v=>!v)}><MoreHorizontal size={19}/></button>
           {menu&&<div onClick={()=>setMenu(false)}>
+            <label className="material-menu-project" onClick={e=>e.stopPropagation()}>项目名称
+              <input aria-label="纹理项目名称" value={p.name} onChange={e=>s.edit(p=>{p.name=e.target.value.slice(0,80);},'name')}/>
+            </label>
             <button onClick={()=>{s.replace({...newMaterial(),name:'未命名纹理',layers:[]});}}>新建项目</button>
             <button onClick={()=>openInput.current?.click()}>打开项目</button>
             <button disabled={saving} onClick={save}>保存项目</button>

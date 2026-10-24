@@ -11,7 +11,7 @@ const canvasSignature=async(page:any)=>page.getByLabel('画布预览').evaluate(
   for(let i=0;i<d.length;i+=17)hash=(Math.imul(hash,31)+d[i])|0;
   return `${c.width}x${c.height}:${hash}`;
 });
-test.beforeEach(async({page})=>{await page.goto('/');await expect(page.getByRole('heading',{name:'纹理工作台',exact:true})).toBeVisible();});
+test.beforeEach(async({page})=>{await page.goto('/');await expect(page.getByRole('heading',{name:'Texture Generator',exact:true})).toBeVisible();});
 
 test('fast live preview preserves the same texture values as the export renderer',async({page})=>{
   const result=await page.evaluate(async()=>{
