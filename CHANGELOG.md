@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Reference UI styling
+
+- Unified the workbench, legacy project workspace, menus and export dialogs around a shared pale blue-gray palette with white surfaces and a `#4e5df5` accent.
+- Added 12 px panel corners, thin control borders, consistent Chinese typography and restrained hover/selection states. Compact layouts preserve the central canvas and scrollable contextual controls.
+- Kept damped slider interaction and continuous canvas updates; native range styling excludes custom sliders so their full pointer area is preserved.
+
 ### 0.6.0 Unified minimal workbench
 
 - Combined uploaded backgrounds, original-color PNG/SVG elements and monochrome textures in one layer stack. Applying presets preserves uploaded artwork.
