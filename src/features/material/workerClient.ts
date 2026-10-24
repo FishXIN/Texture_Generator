@@ -43,7 +43,7 @@ export function createMaterialPreview() {
   const worker=new Worker(new URL('./worker.ts',import.meta.url),{type:'module'});
   let sourceKey='',disposed=false,rejectJob:((e:Error)=>void)|undefined;
   return {
-    async render(project:MaterialProject,size:number,phase:number):Promise<MaterialMaps>{
+    async render(project:MaterialProject,size:number,phase:number,previewChannel:'height'|'normal'='height'):Promise<MaterialMaps>{
       if(disposed)throw new DOMException('已取消','AbortError');
       const key=project.sources.map(s=>s.id).join(',');
       const sources=key===sourceKey?undefined:await Promise.all(project.sources.map(s=>decodeSource(s)));
@@ -56,7 +56,7 @@ export function createMaterialPreview() {
           else if(event.data.type==='error'){rejectJob=undefined;reject(new Error(event.data.message));}
         };
         worker.onerror=event=>reject(new Error(event.message||'预览失败'));
-        worker.postMessage({project:{...project,sources:project.sources.map(s=>({...s,original:''}))},sources,size,phase,exporting:false,preview:true});
+        worker.postMessage({project:{...project,sources:project.sources.map(s=>({...s,original:''}))},sources,size,phase,exporting:false,preview:true,previewChannel});
       });
     },
     cancel(){disposed=true;worker.terminate();rejectJob?.(new DOMException('已取消','AbortError'));}

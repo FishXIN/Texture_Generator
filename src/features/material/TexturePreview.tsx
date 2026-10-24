@@ -21,10 +21,16 @@ export function MapView({ maps, normal = false, transparent = false, pigment = '
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current; if (!canvas || !maps) return;
+    if(normal&&!maps.normal.length)return;
     const unit = mapCanvas(maps, normal, transparent, pigment); canvas.width=unit.width;canvas.height=unit.height;
     const ctx = canvas.getContext('2d')!, w = unit.width / repeat,h=unit.height/repeat;
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    for (let y = 0; y < repeat; y++) for (let x = 0; x < repeat; x++) ctx.drawImage(unit, x * w, y * h, w, h);
+    if(repeat===1)ctx.drawImage(unit,0,0);
+    else{
+      const pattern=ctx.createPattern(unit,'repeat')!;
+      pattern.setTransform(new DOMMatrix().scale(1/repeat));
+      ctx.fillStyle=pattern;ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
     if (boundaries && repeat > 1) {
       ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
       for (let k = 1; k < repeat; k++) { ctx.beginPath(); ctx.moveTo(k * w, 0); ctx.lineTo(k * w, canvas.height); ctx.moveTo(0, k * h); ctx.lineTo(canvas.width, k * h); ctx.stroke(); }

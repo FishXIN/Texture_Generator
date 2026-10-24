@@ -33,7 +33,7 @@ npm test
 - `typecheck` 检查 TypeScript 项目。
 - `build` 执行类型检查，编译前端到 `dist/`、主进程和 preload 到 `dist-electron/`。
 - `.tsbuild/` 为 TypeScript 构建缓存。
-- `test` 在 Chromium 中运行 `tests/workbench.spec.ts`、`tests/library.spec.ts`、`tests/material.spec.ts`、`tests/output.spec.ts` 与 `tests/studio.spec.ts`，自动启动仅浏览器的开发服务。CI 在主分支推送和 Pull Request 时运行浏览器验收、类型检查与构建。
+- `test` 在 Chromium 中运行 `tests/workbench.spec.ts`、`tests/preview.spec.ts`、`tests/library.spec.ts`、`tests/material.spec.ts`、`tests/output.spec.ts` 与 `tests/studio.spec.ts`，自动启动仅浏览器的开发服务。CI 在主分支推送和 Pull Request 时运行浏览器验收、类型检查与构建。
 - 已有 Chromium 可通过 `TEXTURE_TEST_BROWSER=/absolute/path/to/chrome npm test` 指定；路径只用于本地，不写入仓库。运行测试前退出占用 5173 的旧服务，以免热更新产生多个不同版本的状态模块。
 
 修改代码路径后，同时检查 `index.html`、导入路径、`components.json` 与文档。当前 shadcn 配置使用 `tailwind.config.js`、`src/app/styles.css` 和 `src/shared/ui/`。
@@ -42,7 +42,7 @@ npm test
 
 自动验收包括：
 
-共 34 项真实浏览器场景。统一工作台新增实时预览与正式导出数值一致性、拖动时持续更新 / 精确松手 / 一次撤销 / 键盘 / 锁定，以及原色背景与透明元素、预设保留素材、画布比例、保存重开和 RGBA 导出检查。其中完整纹理库的 8 项覆盖 119 个预设的种子复现、项目迁移、非恒定结果与分类可达；10 种算法的独立统计、周期值与梯度；蓝噪低频抑制、间距 / 路径 / 对称几何；13 种运动的空间 / 时间周期及 curl 流场散度；输入亮度 / Alpha；纯 / 优化 SVG 的结构与灰度 / Alpha 像素对照；动态序列及手工编排 UI。
+共 35 项真实浏览器场景。统一工作台新增实时预览与正式导出数值一致性、拖动时持续更新 / 精确松手 / 一次撤销 / 键盘 / 锁定，以及原色背景与透明元素、预设保留素材、画布比例、保存重开和 RGBA 导出检查。预览切换场景覆盖非正方形法线与导出像素一致、法线拖动、DirectX / 强度更新、快速切换、平铺、透明检查恢复和项目 / 导出 / 历史保持。其中完整纹理库的 8 项覆盖 119 个预设的种子复现、项目迁移、非恒定结果与分类可达；10 种算法的独立统计、周期值与梯度；蓝噪低频抑制、间距 / 路径 / 对称几何；13 种运动的空间 / 时间周期及 curl 流场散度；输入亮度 / Alpha；纯 / 优化 SVG 的结构与灰度 / Alpha 像素对照；动态序列及手工编排 UI。
 
 输出相关的 4 项覆盖常用比例 / 清晰度 / 自定义尺寸与 8K 项目重开；实际 8192 × 8192 的 16 位透明 PNG 扫描行、CRC 与像素；8K RGB 法线和 DirectX 配套 ZIP；统一弹窗的键盘选择、外部关闭、焦点恢复与原生 / 自定义导出弹窗内的选择。
 

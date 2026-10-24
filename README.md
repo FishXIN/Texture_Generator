@@ -16,6 +16,7 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 
 - One flat workspace combines monochrome textures, uploaded backgrounds and colored PNG/SVG elements in the same layer stack. Applying presets preserves uploaded artwork.
 - Common adjustments appear first. Algorithms and seeds stay in advanced settings; normal maps are directly selectable in the export dialog.
+- Switch between grayscale artwork and normal-map previews above the canvas. Both update live and support tiling; preview selection preserves export settings.
 - Borderless controls, faint dividers and consistent neutral popups throughout both workspaces.
 - Canvas shortcuts include square, 16:9, 9:16, 4:3 and other common ratios, with 1K / 2K / 4K / 8K quality choices and custom dimensions.
 - Damped sliders update the canvas while dragging; a persistent worker renders the latest parameters and restores full preview detail on release.
@@ -136,6 +137,8 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 纹理和上传素材共用一个画布、同一组图层。直接上传背景与 PNG / SVG 元素，保留原图颜色和透明度；选择纹理预设不会清空素材。背景上传自动沿用原图比例，可导出完整画布，或仅导出不含背景图的素材。
 
 界面采用浅灰扁平布局，无框输入、浅细分隔线和统一的下拉菜单与弹窗。默认展示常用调整；算法、种子和运动细节收进高级设置，法线在导出面板直接选择。滑块带轻阻尼，拖动时中心效果持续更新，松开后恢复清晰预览，一次撤销还原整次拖动。
+
+画布上方的「黑白稿 / 法线贴图」可直接切换二维预览，均支持实时调参和平铺。切换保留导出设置；法线来自纹理场，黑白稿保留上传素材合成和透明底检查。
 
 点击画布尺寸，快捷选择 1:1、16:9、9:16、4:3 等常用比例和 1K / 2K / 4K / 8K 清晰度，也可直接输入宽高。清晰度同步导出最长边，尺寸随比例变化。
 

@@ -11,7 +11,7 @@ const scope = self as unknown as {
 };
 let cachedSources:DecodedSource[]=[];
 scope.onmessage = async event => {
-  const { project, size, sources:incoming, exporting,format,phase,preview } = event.data as { project: MaterialProject; size: number; sources?: DecodedSource[]; exporting: boolean;format:string;phase:number;preview?:boolean };
+  const { project, size, sources:incoming, exporting,format,phase,preview,previewChannel } = event.data as { project: MaterialProject; size: number; sources?: DecodedSource[]; exporting: boolean;format:string;phase:number;preview?:boolean;previewChannel?:'height'|'normal' };
   if(incoming)cachedSources=incoming;
   const sources=cachedSources;
   try {
@@ -19,7 +19,8 @@ scope.onmessage = async event => {
       const output=await exportSequence(project,size,sources,progress=>scope.postMessage({type:'progress',progress}));
       scope.postMessage({type:'export',output});return;
     }
-    const maps = renderMaterial(project, size, sources, progress => scope.postMessage({ type: 'progress', progress: progress * (exporting ? 0.8 : 1) }),phase,preview,exporting?format==='effect'?'height':project.export.maps:'both');
+    const channels=exporting?format==='effect'?'height':project.export.maps:preview?previewChannel??'height':'both';
+    const maps = renderMaterial(project, size, sources, progress => scope.postMessage({ type: 'progress', progress: progress * (exporting ? 0.8 : 1) }),phase,preview,channels);
     if (exporting) {
       const output = format==='effect'?vectorOutput(project,await effectSvg(project,maps),'effect'):await exportMaterial(project, maps, progress => scope.postMessage({ type: 'progress', progress: 0.8 + progress * 0.2 }));
       scope.postMessage({ type: 'export', output });

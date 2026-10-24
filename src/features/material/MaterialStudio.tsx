@@ -40,8 +40,9 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
   const [library,setLibrary]=useState<'textures'|'assets'>('textures');
   const [exportOpen,setExportOpen]=useState(false),[menu,setMenu]=useState(false),[saving,setSaving]=useState(false),[importing,setImporting]=useState(false);
   const [recovery,setRecovery]=useState(false),[tiled,setTiled]=useState(false),[checkBackground,setCheckBackground]=useState('checker');
+  const [previewChannel,setPreviewChannel]=useState<'height'|'normal'>('height');
   const [playing,setPlaying]=useState(false),clock=useRef(0);
-  const {maps,error}=useMaterialPreview(playing,clock);
+  const {maps,error}=useMaterialPreview(playing,clock,previewChannel);
   const openInput=useRef<HTMLInputElement>(null),sourceInput=useRef<HTMLInputElement>(null);
   const importTarget=useRef<'background'|'elements'|'reference'>('elements');
   const drag=useRef<{id:string;dx:number;dy:number}|null>(null);
@@ -212,15 +213,21 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
       </aside>
       <main className="material-center">
         <div className="material-view-toolbar">
-          <MaterialCanvasSize/>
+          <div className="material-view-controls">
+            <MaterialCanvasSize/>
+            <div className="material-preview-switch" role="group" aria-label="预览贴图">
+              <button aria-pressed={previewChannel==='height'} onClick={()=>setPreviewChannel('height')}>黑白稿</button>
+              <button aria-pressed={previewChannel==='normal'} onClick={()=>setPreviewChannel('normal')}>法线贴图</button>
+            </div>
+          </div>
           <div className="material-tile-controls"><button className={tiled?'active':''} aria-pressed={tiled} onClick={()=>setTiled(v=>!v)}>平铺预览</button>
-            {p.export.background==='transparent'&&<StudioSelect label="透明检查底色" value={checkBackground} onChange={setCheckBackground}><option value="checker">棋盘格</option><option value="light">白底</option><option value="dark">黑底</option></StudioSelect>}
+            {previewChannel==='height'&&p.export.background==='transparent'&&<StudioSelect label="透明检查底色" value={checkBackground} onChange={setCheckBackground}><option value="checker">棋盘格</option><option value="light">白底</option><option value="dark">黑底</option></StudioSelect>}
           </div>
         </div>
         {recovery&&<div className="material-recovery"><span>继续上次编辑？</span><button onClick={()=>{try{s.replace(parseMaterial(localStorage.getItem('texture-material-recovery')!));}catch(e){s.message((e as Error).message);}setRecovery(false);}}>恢复</button><button onClick={()=>setRecovery(false)}>关闭</button></div>}
         <div className="material-stage">
           <div className={`material-flat material-check-${checkBackground}`} onPointerDown={e=>{
-            if(!layer||layer.locked||layer.distribution!=='manual'||playing||tiled||layer.motion!=='none')return;
+            if(!layer||layer.locked||layer.distribution!=='manual'||playing||tiled||layer.motion!=='none'||previewChannel==='normal'&&layer.role!=='texture')return;
             const rect=e.currentTarget.querySelector('canvas')!.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,y=(e.clientY-rect.top)/rect.height;
             if(x<0||x>1||y<0||y>1)return;
             const item=createParticles(layer,0).reverse().find(o=>!o.locked&&torusDistance({x,y},o)<o.radius);
@@ -230,7 +237,7 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
             const rect=e.currentTarget.querySelector('canvas')!.getBoundingClientRect(),x=frac((e.clientX-rect.left)/rect.width-drag.current.dx),y=frac((e.clientY-rect.top)/rect.height-drag.current.dy),id=drag.current.id;
             s.edit(p=>{const o=p.layers.find(l=>l.id===layer.id)?.objects.find(o=>o.id===id);if(o&&!o.locked){o.x=x;o.y=y;}},`${id}:drag`);
           }} onPointerUp={()=>{if(drag.current)window.dispatchEvent(new Event('texture-range-end'));drag.current=null;}} onPointerCancel={()=>{if(drag.current)window.dispatchEvent(new Event('texture-range-end'));drag.current=null;}}>
-            <MapView maps={maps} transparent={p.export.background==='transparent'} pigment={p.export.pigment} repeat={tiled?3:1} label="画布预览"/>
+            <MapView maps={maps} normal={previewChannel==='normal'} transparent={p.export.background==='transparent'} pigment={p.export.pigment} repeat={tiled?3:1} label="画布预览"/>
           </div>
           {!p.layers.length&&<div className="material-empty">选一个纹理，或上传自己的素材</div>}
           {error&&<div className="material-generation-error" role="alert">{error}</div>}

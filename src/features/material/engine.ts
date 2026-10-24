@@ -384,7 +384,7 @@ export function encodeNormal(du: number, dv: number, strength: number, directX: 
 }
 export function renderMaterial(p: MaterialProject, size: number, sources: DecodedSource[] = [], progress?: (v: number) => void,phase=p.timeline?.phase??0,preview=false,channels:MaterialProject['export']['maps']='both'): MaterialMaps {
   const dims=outputDimensions(p,size),w=dims.width,h=dims.height;
-  const needsNormal=!preview&&channels!=='height';
+  const needsNormal=channels==='normal'||!preview&&channels==='both';
   const sample = createSampler(p, sources,phase,!needsNormal), t = scratch(), height = new Float32Array(w * h), normal = new Uint8ClampedArray(needsNormal?w * h * 4:0);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {

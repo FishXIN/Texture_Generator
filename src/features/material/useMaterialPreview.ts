@@ -4,11 +4,11 @@ import { useMaterialStore } from './store';
 import type { MaterialMaps } from './engine';
 import { frac } from './algorithms';
 
-export function useMaterialPreview(playing:boolean,clock:React.MutableRefObject<number>) {
+export function useMaterialPreview(playing:boolean,clock:React.MutableRefObject<number>,channel:'height'|'normal'='height') {
   const project=useMaterialStore(s=>s.project);
   const [maps,setMaps]=useState<MaterialMaps|null>(null),[error,setError]=useState('');
-  const options=useRef({playing,dragging:false}),dirty=useRef(true),wake=useRef(()=>{});
-  options.current.playing=playing;
+  const options=useRef({playing,channel,dragging:false}),dirty=useRef(true),wake=useRef(()=>{});
+  options.current.playing=playing;options.current.channel=channel;
   const key=JSON.stringify({layers:project.layers.map(({locked,name,...l})=>l),sources:project.sources.map(s=>s.id),canvas:project.canvas,
     normal:project.normal,timeline:project.timeline,background:project.export.background,pigment:project.export.pigment});
   useEffect(()=>{
@@ -22,8 +22,10 @@ export function useMaterialPreview(playing:boolean,clock:React.MutableRefObject<
           const p=useMaterialStore.getState().project;
           const phase=options.current.playing?frac((performance.now()-clock.current)/1000/p.timeline.duration):p.timeline.phase;
           const interactive=options.current.dragging||options.current.playing,start=performance.now();
-          const result=await client.render({...p,export:{...p.export,scope:'canvas'}},interactive?interactiveSize:512,phase);
+          const requestedChannel=options.current.channel;
+          const result=await client.render({...p,export:{...p.export,scope:'canvas'}},interactive?interactiveSize:512,phase,requestedChannel);
           if(!alive)break;
+          if(requestedChannel!==options.current.channel){dirty.current=true;continue;}
           if(interactive){
             const elapsed=performance.now()-start;
             if(elapsed>55)interactiveSize=128;
@@ -42,6 +44,6 @@ export function useMaterialPreview(playing:boolean,clock:React.MutableRefObject<
     void run();
     return()=>{alive=false;client.cancel();cancelAnimationFrame(frame);window.removeEventListener('texture-range-start',start);window.removeEventListener('texture-range-end',end);};
   },[]);
-  useEffect(()=>{dirty.current=true;wake.current();},[key,playing]);
+  useEffect(()=>{dirty.current=true;wake.current();},[key,playing,channel]);
   return {maps,error};
 }

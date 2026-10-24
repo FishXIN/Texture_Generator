@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Grayscale and normal preview
+
+- Added compact grayscale / normal-map buttons above the same 2D canvas, preserving project history and export settings.
+- Preview workers compute the visible channel, retain adaptive live updates and use the export renderer's normal gradients and direction convention. Rapid switches discard old-channel results and retain the previous image until normals are ready.
+- Render tiled previews with a repeating canvas pattern to prevent transparent seams at fractional tile boundaries.
+- Added browser coverage for non-square export/preview pixel agreement, normal-map slider updates and undo, convention/strength changes, rapid switches, transparency restoration and tiling.
+
 ### Canvas sizes and unified popups
 
 - Added eleven common aspect ratios ordered from 21:9 to 9:21 with 1:1 centered, resolution shortcuts through 8K and custom canvas dimensions. Resolution choices update both canvas and export sizes.
