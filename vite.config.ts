@@ -4,7 +4,7 @@ import electron from 'vite-plugin-electron/simple';
 import renderer from 'vite-plugin-electron-renderer';
 import { resolve } from 'node:path';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -12,7 +12,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    electron({
+    ...(mode === 'web' || process.env.TEXTURE_WEB === '1' ? [] : [electron({
       main: {
         entry: 'electron/main.ts',
         vite: {
@@ -29,8 +29,7 @@ export default defineConfig({
           },
         },
       },
-    }),
-    renderer(),
+    }), renderer()]),
   ],
   build: {
     outDir: 'dist',
@@ -40,4 +39,4 @@ export default defineConfig({
     port: 5173,
     strictPort: false,
   },
-});
+}));

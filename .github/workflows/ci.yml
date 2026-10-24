@@ -33,5 +33,19 @@ jobs:
       - name: Type Check
         run: npm run typecheck
 
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser Acceptance
+        run: npm test
+
       - name: Build
         run: npm run build
+
+      - name: Upload Failed Test Evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-evidence
+          path: test-results/
+          if-no-files-found: ignore

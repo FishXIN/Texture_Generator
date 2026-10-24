@@ -1,5 +1,6 @@
 import type { LoadedAsset } from '@/features/assets/types';
 import type { PlacedItem } from '@/features/texture/types';
+import { sanitizeSvg, assetSvg } from '@/features/assets/svg';
 
 type ExportSvgArgs = {
   baseAsset: LoadedAsset;
@@ -17,10 +18,10 @@ export function exportSvgString({ baseAsset, elementsById, placements }: ExportS
     y: 0,
     width: baseAsset.width,
     height: baseAsset.height,
-  });
+  },'legacy_background');
 
   const elementNodes = placements
-    .map((item) => {
+    .map((item,index) => {
       const element = elementsById.get(item.elementId);
       if (!element || element.sourceType !== 'svg' || !element.rawText) {
         throw new Error('SVG export requires all imported assets to be SVG.');
@@ -30,7 +31,7 @@ export function exportSvgString({ baseAsset, elementsById, placements }: ExportS
         y: -item.height / 2,
         width: item.width,
         height: item.height,
-      });
+      },`legacy_object_${index}`);
       return `<g transform="translate(${item.x.toFixed(2)} ${item.y.toFixed(2)}) rotate(${item.rotation.toFixed(2)})">${nestedSvg}</g>`;
     })
     .join('');
@@ -41,19 +42,18 @@ export function exportSvgString({ baseAsset, elementsById, placements }: ExportS
 function buildSvgFragment(
   asset: LoadedAsset,
   placement: { x: number; y: number; width: number; height: number },
+  prefix: string,
 ) {
-  const parser = new DOMParser();
-  const documentNode = parser.parseFromString(asset.rawText ?? '', 'image/svg+xml');
+  const cleaned=sanitizeSvg(asset.rawText??'',asset.name);
+  if(cleaned.issues.length)throw new Error(`${asset.name}：${cleaned.issues.join('；')}。请在纹理工作台检查并使用效果保留出口。`);
+  const documentNode = new DOMParser().parseFromString(assetSvg(cleaned,prefix), 'image/svg+xml');
   const svgElement = documentNode.documentElement;
 
   if (!svgElement || svgElement.nodeName.toLowerCase() !== 'svg') {
     throw new Error(`Invalid SVG asset: ${asset.name}`);
   }
 
-  const serializer = new XMLSerializer();
-  const innerContent = Array.from(svgElement.childNodes).map((node) => serializer.serializeToString(node)).join('');
-  const viewBox = svgElement.getAttribute('viewBox') ?? `0 0 ${asset.width} ${asset.height}`;
-  const preserveAspectRatio = svgElement.getAttribute('preserveAspectRatio') ?? 'xMidYMid meet';
-
-  return `<svg x="${placement.x.toFixed(2)}" y="${placement.y.toFixed(2)}" width="${placement.width.toFixed(2)}" height="${placement.height.toFixed(2)}" viewBox="${viewBox}" preserveAspectRatio="${preserveAspectRatio}" overflow="visible">${innerContent}</svg>`;
+  for(const [key,value] of Object.entries(placement))svgElement.setAttribute(key,value.toFixed(2));
+  svgElement.setAttribute('overflow','visible');
+  return new XMLSerializer().serializeToString(svgElement);
 }

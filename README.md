@@ -1,116 +1,104 @@
-# Texture Generator · 纹理生成器
+# Texture Generator · 纹理工作台
 
-面向设计师的本地纹理与图形编排工具。导入素材，控制疏密、尺寸和旋转，用随机种子复现排列，再导出到设计工作流。
+面向设计师的本地纹理制作工具：生成颗粒、编排 SVG、制作无缝图案与循环动态，再导出透明图片、可编辑矢量和 PNG 序列。
 
-[下载安装包](https://github.com/FishXIN/Texture_Generator/releases/latest) · [使用与能力边界](#当前能力) · [产品策划](docs/product-plan.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [English](#english)
+[English](README.en.md) · [产品策划](docs/product-plan.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [变更记录](CHANGELOG.md) · [已发布安装包](https://github.com/FishXIN/Texture_Generator/releases)
 
-## 项目定位
+> 主分支为 **0.2.0** 工作台源码。GitHub Releases 中的旧版安装包仍是旧功能，以附件版本为准。
 
-让纹理从一次性的随机结果，变成可控制、可复用的设计素材。
+![纹理工作台实际界面](docs/images/studio.png)
 
-当前 `0.1.5` 版本提供底图与元素素材的随机编排、实时预览和静态导出。后续将围绕**参数化纹理、自定义图形编排、可靠导出**扩展无缝平铺、图层和循环动态纹理。
+## 能做什么
 
-适合制作包装与品牌图案、视觉设计中的素材阵列，以及背景纹理探索。当前没有内置颗粒生成器，也不保证排列结果能够无缝重复。
-
-## 当前能力
-
-| 功能 | 当前支持 |
+| 能力 | 0.2.0 |
 | --- | --- |
-| 素材导入 | 一张底图、多个元素；PNG、JPEG、WebP、SVG；点击或拖拽导入 |
-| 自动编排 | 随机散布；控制元素间距和边缘间距 |
-| 参数控制 | 目标数量、基础尺寸、尺寸随机度、基础角度、旋转随机度、完全随机旋转 |
-| 随机复现 | 相同画布、素材顺序、参数与种子生成相同排列；支持更换种子 |
-| 预览 | 参数即时更新；画布按容器适配；浅色与深色界面 |
-| 静态导出 | PNG、JPEG，支持 1× / 2× / 3× 尺寸 |
-| SVG 导出 | 底图和全部元素均为 SVG 时，组合源 SVG 图形结构 |
-| 本地文件 | Electron 系统保存对话框；浏览器运行时回退为下载 |
+| 图形纹理 | 圆点、椭圆、短线、碎片；密度、尺寸、颜色与透明度独立 |
+| 图层 | 显隐、锁定、复制、排序、删除；正常、正片叠底、滤色、叠加、颜色加深 |
+| SVG 编排 | 本地导入、自由摆放、拖动、复制、旋转、缩放、改色；多个素材按比例散布 |
+| 自动排列 | 随机、网格、错位、聚集；间距、方向、疏密渐变与扰动 |
+| 可复现 | 独立随机种子、参数锁定、局部随机；重新生成不打乱手工图形 |
+| 空间无缝 | 周期边缘副本、相邻单元避让、单元编辑与 3 × 3 整面预览 |
+| 蒙版 | 矩形、椭圆、SVG 透明轮廓；生成范围或避让区域 |
+| 循环动态 | 漂移、游动、方向流动、旋转、呼吸；时间定位、对象运动锁定 |
+| 项目 | 素材、图层、手工对象、种子、运动与导出配置保存；撤销重做、本地恢复 |
+| 检查预览 | 棋盘格、深色、浅色、自定义底；单元边界和 25%–200% 缩放 |
+| 原有功能 | 顶栏「底图阵列」保留旧版底图与位图元素编排 |
 
-**导出需要注意：**
+所有导入、渲染与导出均在本机处理，作品不上传服务器。内置预设可继续修改，也可以保存自己的参数预设。
 
-- **PNG** 保留场景已有透明度，但总会绘制底图；不透明底图不会自动变成透明。当前没有独立的背景开关或透明度参数。
-- **JPEG** 使用白色背景，不保留透明通道。
-- **SVG** 保留图形结构，不会先把整个场景转成一张位图。源 SVG 自身仍可能包含位图、字体或滤镜；目前没有纯矢量检查和完整兼容性检查，不能仅凭 `.svg` 后缀保证纯矢量。
-- 导出范围为整个底图画布。位图按所选倍率重新绘制；放大原有位图不会增加其原始细节。
-- “密度”目前表示目标实例数。间距和画布限制可能让实际生成数量低于目标，结果以界面统计为准。
+## 导出得到什么
 
-多图层、自由摆放、无缝平铺、蒙版、连续噪点、动画、PNG 序列、项目保存和撤销重做均为**规划功能**，尚未实现。详见[迭代路线](docs/roadmap.md)。
+| 出口 | 结果与边界 |
+| --- | --- |
+| PNG | 当前帧；可保留完整 Alpha；预览衬底不会进入透明文件 |
+| JPEG | 当前帧；使用画布背景颜色，不保留透明 |
+| SVG · 纯矢量 | 真实图形结构；阻止含位图、字体或滤镜的素材 |
+| SVG · 效果保留 | 保留清理后的 SVG 外观，可含内嵌位图、字体或滤镜，并列出兼容提醒 |
+| SVG · 优化 | 复用自定义图形结构，减少重复内容；仍要求纯矢量素材 |
+| PNG 序列 ZIP | 每帧保留 Alpha；包含帧率、尺寸、时长和循环说明 `manifest.json` |
 
-## 使用
+导出区域包括当前画布、选区、无缝重复单元和铺满的成品图。面板显示实际尺寸、对象数、透明状态、循环状态和 SVG 大小；生成过程可以取消，失败后可以继续编辑。
 
-1. 导入底图，确定画布尺寸。
-2. 批量导入元素素材。
-3. 调整密度、尺寸、旋转和间距，查看实时排列。
-4. 保留满意的随机种子；需要新排列时点击“重排”。
-5. 选择 PNG、JPEG 或符合条件的 SVG，保存到本地。
+**当前边界：**
 
-安装包在 [GitHub Releases](https://github.com/FishXIN/Texture_Generator/releases) 下载。当前发布流程覆盖 macOS 和 Windows；不同版本的可用架构以实际附件为准。发布说明见[安装包与发布](docs/releases.md)。
+- SVG 清理脚本、外部引用和不支持的元素，保留原始文件供下载。支持简单标签、类、ID 与后代 / 子代样式选择器；复杂样式会提示。文字建议在设计软件中转轮廓。
+- 空间无缝漂移吸附到八个方向，按整数个单元循环；速度由时长与循环次数控制。运动参数不会重抽静态分布。
+- 间距是保守的包围范围避让，蒙版按 Alpha 采样选择生成位置，再按轮廓裁切显示；限制可能降低实际数量。
+- 本版提供图形颗粒，尚不包含连续云雾、纸张噪声、沿路径排列、透明视频、PDF 或动态 SVG。
+- SVG 混合与效果仍需在目标设计软件核对。浏览器像素检查通过不等于所有设计软件均已验证。
 
-## 本地开发
+规模限制：画布 64–4096 px，16 图层、32 SVG 素材、20,000 自动颗粒、2,000 手工对象；单个 SVG 5 MB，项目 25 MB。静态位图最多 16 MP / 8192 px；序列每帧最多 4 MP、720 帧、ZIP 256 MB。复杂 SVG 或高密度作品仍可能较慢，编辑预览降采样不会改变种子与排列。详见[开发与验收](docs/development.md)。
 
-推荐 Node.js 20 LTS 或 22 LTS、npm 10+。
+## 开始制作
+
+1. 选择预设或新建项目，设定画布与无缝模式。
+2. 生成颗粒，或导入 SVG 后选择「放置」「散布」。
+3. 调整图层、排列、透明度、蒙版；锁定满意的随机参数。
+4. 在整面预览检查重复节奏，在深浅底检查透明效果。
+5. 开启运动并播放，或定位到需要的静态帧。
+6. 保存 `.texture.json` 项目，再选择用途导出。
+
+## 本地运行
+
+推荐 Node.js 20 / 22、npm 10+。
 
 ```bash
 git clone https://github.com/FishXIN/Texture_Generator.git
 cd Texture_Generator
 npm ci
-npm run dev
+npm run dev:web    # 浏览器工作台，默认 http://127.0.0.1:5173
 ```
 
 ```bash
-npm run typecheck   # 类型检查
-npm run build       # 编译前端与 Electron
-npm run preview     # 浏览器预览编译后的前端
-npm run dist        # 当前平台安装包
+npm run dev        # Electron 桌面工作台
+npm run typecheck
+npm run build      # 前端 + Electron 生产构建
+npx playwright install chromium
+npm test           # 真实浏览器验收
+npm run dist:mac   # macOS 安装包；Windows 使用 dist:win
 ```
 
-macOS / Windows 打包分别使用 `npm run dist:mac` / `npm run dist:win`。安装包输出到 `release/`，不提交到 Git。启动、证书问题和构建约定见[开发指南](docs/development.md)。
+安装包输出到 `release/`，不提交到源码仓库。测试涵盖种子复现、独立随机流、周期避让、循环边界、透明蒙版、SVG / Canvas 像素比较、安全导入、ZIP 校验、取消恢复及界面保存重开。[环境与证书说明](docs/development.md)。
 
 ## 目录
 
 ```text
 Texture_Generator/
-├── electron/                 # 桌面窗口、预加载、原生文件保存
+├── electron/                  # 桌面窗口、预加载与原生文件保存
 ├── src/
-│   ├── app/                  # 应用入口、界面组装、全局样式
+│   ├── app/                   # 工作台组装、入口、全局样式
 │   ├── features/
-│   │   ├── assets/           # 素材导入、解码、类型、状态与界面
-│   │   ├── texture/          # 参数、随机排列、Canvas 渲染与预览
-│   │   └── export/           # 导出面板、SVG 序列化、格式类型
-│   └── shared/               # 基础 UI、主题、通用工具与桌面类型
-├── docs/                     # 产品策划、路线、架构与开发说明
-├── .github/                  # 构建检查、发布流程与协作模板
-├── electron-builder.yml      # 安装包配置
-└── package.json
+│   │   ├── project/           # 作品模型、历史、保存、预设、图层与参数
+│   │   ├── assets/            # SVG 清理与解码；旧版位图素材模块
+│   │   ├── texture/           # 确定性场景、周期运动、Canvas；旧版阵列
+│   │   └── export/            # 导出检查、SVG、位图与 PNG 序列 ZIP
+│   └── shared/                # 公共 UI、工具与桌面桥接类型
+├── tests/                     # Playwright 浏览器验收
+├── docs/                      # 产品、架构、开发与发布说明
+└── .github/                   # CI、发布与协作模板
 ```
 
-模块职责和扩展位置见[架构说明](docs/architecture.md)。只为已有能力建立目录，规划中的功能在实现时再增加模块。
-
-## 参与改进
-
-欢迎通过 [Issues](https://github.com/FishXIN/Texture_Generator/issues) 提交实际设计场景、导入异常或导出问题。请附上复现步骤、系统和版本；素材仅在可以公开时附带。
-
-提交代码前阅读[贡献说明](CONTRIBUTING.md)，并运行类型检查与构建。[变更记录](CHANGELOG.md)区分已发布版本与尚未发布的改动。
-
-## English
-
-Texture Generator is a local-first desktop tool for designers to arrange imported SVG and raster assets into reproducible texture layouts.
-
-The current **0.1.5** release supports:
-
-- A base image and multiple element assets: PNG, JPEG, WebP and SVG.
-- Seeded random placement with size, rotation, spacing and edge-margin controls.
-- Immediate Canvas preview and light / dark interface themes.
-- PNG and JPEG export at 1×, 2× or 3×.
-- SVG composition when all imported assets are SVG, preserving their source graphic structure.
-- Native file saving in Electron and download fallback in a browser.
-
-PNG preserves existing scene transparency, but always includes the base image. JPEG uses a white background. SVG inputs may contain embedded images, fonts or filters, so the current exporter **does not certify pure-vector output or full compatibility**. Export covers the entire base-image canvas; spacing constraints may produce fewer elements than the requested count.
-
-Built-in noise generation, layers, manual placement, seamless tiling, masks, animation, PNG sequences, project persistence and undo / redo are planned capabilities. They are not available in the current release.
-
-Use `npm ci` followed by `npm run dev` for development. Run `npm run typecheck` and `npm run build` before submitting changes. Installers are available on [GitHub Releases](https://github.com/FishXIN/Texture_Generator/releases/latest).
-
-See the [roadmap](docs/roadmap.md), [architecture](docs/architecture.md) and [development guide](docs/development.md) for the current direction and implementation boundaries. Product planning documents are currently in Chinese.
+模块职责见[架构说明](docs/architecture.md)。贡献前请阅读 [CONTRIBUTING](CONTRIBUTING.md)，问题与素材兼容反馈请提交到 [Issues](https://github.com/FishXIN/Texture_Generator/issues)。
 
 ## License
 

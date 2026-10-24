@@ -1,8 +1,8 @@
 {
   "name": "texture-generator",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "private": true,
-  "description": "A local-first desktop tool for reproducible texture layouts from imported SVG and raster assets.",
+  "description": "A local-first texture studio with seamless patterns, editable SVG graphics and transparent animation exports.",
   "author": "Texture Generator",
   "license": "MIT",
   "main": "dist-electron/main.js",
@@ -17,6 +17,8 @@
   "homepage": "https://github.com/FishXIN/Texture_Generator",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite --mode web --host 127.0.0.1",
+    "test": "playwright test",
     "typecheck": "tsc -b --pretty false",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
@@ -42,6 +44,7 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^22.8.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

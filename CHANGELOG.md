@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### 0.2.0 Studio
+
+- Added a desktop browser/Electron texture studio with an independent canvas, transparent background, graphic particles, multiple layers and editable SVG placement.
+- Added random, grid, staggered and clustered layouts, weighted custom shapes, periodic neighbor spacing, rectangular/elliptical/SVG masks and tiled zoom preview.
+- Added separate seeded random streams, parameter locks, project files with original assets, local recovery, presets and undo/redo.
+- Added periodic drift, wandering, directional flow, rotation and breathing; manual motion locks, playback and arbitrary-frame export.
+- Added transparent PNG, JPEG, pure/effects/optimized SVG and transparent PNG sequence ZIP exports with regions, scale, preflight checks, progress, cancellation and timing manifests.
+- Added SVG sanitization, scoped IDs, CSS cascade handling, original-source retention and explicit raster/font/filter compatibility notices.
+- Retained the original raster/base-image editor under the “底图阵列” entry.
+- Added 10 Chromium acceptance scenarios, pixel comparisons, independent ZIP verification and CI browser checks.
+- Corrected fractional-scale tile rendering, recolored gradient transparency, missing-mask export checks and oversized SVG aspect-ratio handling.
+- Updated the bilingual README, architecture, roadmap and development instructions for the implemented capabilities. Adjusted the macOS window header for traffic-light controls.
+
+No 0.2.0 installer release is implied by this source change.
+
 ### Changed
 
 - Reorganized source code into `app`, `features/assets`, `features/texture`, `features/export`, and `shared`, keeping the existing layout and rendering behavior.

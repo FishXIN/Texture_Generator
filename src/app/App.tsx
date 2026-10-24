@@ -1,275 +1,122 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { Download, Gauge, ImageIcon, Layers3, Sparkles } from 'lucide-react';
-import { BaseImageUploader } from '@/features/assets/components/BaseImageUploader';
-import { ElementThumbList } from '@/features/assets/components/ElementThumbList';
-import { ElementsUploader } from '@/features/assets/components/ElementsUploader';
-import { EmptyState } from '@/features/texture/components/EmptyState';
-import { PreviewCanvas } from '@/features/texture/components/PreviewCanvas';
-import { SeedControl } from '@/features/texture/components/SeedControl';
-import { SliderField } from '@/shared/ui/SliderField';
-import { ExportBar } from '@/features/export/components/ExportBar';
-import { ThemeToggle } from '@/shared/theme/ThemeToggle';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { generateLayout } from '@/features/texture/engine/layout';
-import { useAssetsStore } from '@/features/assets/store';
-import { useParamsStore } from '@/features/texture/store';
-import { useThemeStore } from '@/shared/theme/store';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Download, FolderOpen, Pause, Play, Redo2, RotateCcw, Save, Undo2 } from 'lucide-react';
+import { Library } from '@/features/project/Library';
+import { Inspector } from '@/features/project/Inspector';
+import { newProject } from '@/features/project/model';
+import { parseProject, projectBlob, saveBlob } from '@/features/project/io';
+import { useProjectStore } from '@/features/project/store';
+import { buildScene } from '@/features/texture/engine/scene';
+import type { Scene } from '@/features/texture/engine/scene';
+import { StudioCanvas } from '@/features/texture/components/StudioCanvas';
+import type { PreviewBackground } from '@/features/texture/components/StudioCanvas';
+import { StudioExportPanel } from '@/features/export/components/StudioExportPanel';
+import LegacyEditor from '@/features/texture/components/LegacyEditor';
 
 export default function App() {
-  const [notice, setNotice] = useState('准备就绪');
-  const { baseAsset, elements, isLoading, setBaseImage, clearBaseImage, addElements, removeElement } =
-    useAssetsStore();
-  const { params, setParam, reshuffle } = useParamsStore();
-  const { theme, toggleTheme } = useThemeStore();
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
-
-  const placements = useMemo(() => {
-    if (!baseAsset) return [];
-    return generateLayout({
-      canvasWidth: baseAsset.width,
-      canvasHeight: baseAsset.height,
-      elements,
-      params,
-    });
-  }, [baseAsset, elements, params]);
-
-  const baseMeta = baseAsset ? `${baseAsset.width} x ${baseAsset.height}` : '未上传';
-  const platform = window.electron?.platform ?? 'web';
-
-  const handleBaseUpload = async (files: File[]) => {
-    if (!files[0]) return;
-    try {
-      await setBaseImage(files[0]);
-      setNotice(`已载入底图：${files[0].name}`);
-    } catch (error) {
-      console.error(error);
-      setNotice('底图加载失败，请确认文件可读。');
-    }
+  const s=useProjectStore();const p=s.project;
+  const [scene,setScene]=useState<Scene|null>(null);const [tiled,setTiled]=useState(false);const [boundaries,setBoundaries]=useState(true);
+  const [zoom,setZoom]=useState<number|null>(null);
+  const [background,setBackground]=useState<PreviewBackground>('checker');const [customBackground,setCustomBackground]=useState('#c8c3ae');
+  const [advanced,setAdvanced]=useState(false);const [time,setTime]=useState(0);const [playing,setPlaying]=useState(false);
+  const [exportOpen,setExportOpen]=useState(false);const [legacy,setLegacy]=useState(false);
+  const [recovery,setRecovery]=useState(false);const [saving,setSaving]=useState(false);
+  const openInput=useRef<HTMLInputElement>(null);
+  useEffect(()=>{if(window.electron?.platform==='darwin')document.documentElement.dataset.desktop='mac';},[]);
+  const save=useCallback(async()=>{
+    if(saving)return;setSaving(true);
+    try{const result=await saveBlob(projectBlob(useProjectStore.getState().project),`${useProjectStore.getState().project.name}.texture.json`,'json');
+      useProjectStore.getState().message(result.canceled?'已取消保存':'项目已保存，包含素材、图层和手工摆放。');
+    }catch(e){useProjectStore.getState().message(e instanceof Error?e.message:'保存失败');}finally{setSaving(false);}
+  },[saving]);
+  useEffect(()=>{
+    try{setRecovery(!!localStorage.getItem('texture-recovery'));}catch{/* Saving the project remains available. */}
+  },[]);
+  useEffect(()=>{
+    let active=true;
+    buildScene(p).then(value=>{if(active)setScene(value);}).catch(e=>s.message(e.message));
+    return()=>{active=false;};
+  },[p]);
+  useEffect(()=>{
+    if(s.revision===0)return;
+    const timer=setTimeout(()=>{
+      try{localStorage.setItem('texture-recovery',JSON.stringify(p));}
+      catch{s.message('浏览器恢复空间不足，请保存项目文件。');}
+    },700);
+    return()=>clearTimeout(timer);
+  },[p,s.revision]);
+  useEffect(()=>{
+    if(!playing)return;
+    let id=0;let previous=performance.now();
+    const frame=(now:number)=>{const dt=Math.min(0.1,(now-previous)/1000);previous=now;setTime(t=>(t+dt)%p.animation.duration);id=requestAnimationFrame(frame);};
+    id=requestAnimationFrame(frame);return()=>cancelAnimationFrame(id);
+  },[playing,p.animation.duration]);
+  useEffect(()=>{setTime(t=>t%p.animation.duration);},[p.animation.duration]);
+  useEffect(()=>{
+    const onKey=(event:KeyboardEvent)=>{
+      if(exportOpen||legacy)return;
+      const target=event.target as HTMLElement;
+      if(['INPUT','TEXTAREA','SELECT'].includes(target.tagName)||target.isContentEditable)return;
+      const command=event.metaKey||event.ctrlKey;
+      if(command&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?s.redo():s.undo();}
+      else if(command&&event.key.toLowerCase()==='y'){event.preventDefault();s.redo();}
+      else if(command&&event.key.toLowerCase()==='s'){event.preventDefault();void save();}
+      else if(event.code==='Space'){event.preventDefault();setPlaying(v=>!v);}
+      else if(event.key==='Escape')s.selectObject(null);
+    };
+    window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);
+  },[exportOpen,legacy,save]);
+  const open=async(file?:File)=>{
+    if(!file)return;
+    try{if(file.size>25_000_000)throw new Error('项目超过 25 MB。');
+      s.replace(parseProject(await file.text()));setTime(0);setPlaying(false);s.message(`已打开 ${file.name}`);
+    }catch(e){s.message(e instanceof Error?e.message:'项目打开失败');}finally{if(openInput.current)openInput.current.value='';}
   };
-
-  const handleElementsUpload = async (files: File[]) => {
-    if (!files.length) return;
-    try {
-      await addElements(files);
-      setNotice(`已新增 ${files.length} 个元素素材。`);
-    } catch (error) {
-      console.error(error);
-      setNotice('元素加载失败，请检查 PNG / JPEG / WEBP / SVG 文件。');
-    }
-  };
-
-  return (
-    <div className="h-screen overflow-hidden bg-background text-foreground">
-      <div className="flex h-full">
-        <main className="flex min-w-0 flex-1 flex-col border-r border-border bg-muted/20">
-          <header className="flex items-center justify-between border-b border-border px-6 py-4">
-            <div>
-              <p className="text-ui-xs uppercase tracking-[0.24em] text-muted-foreground">Texture / Array Generator</p>
-              <h1 className="mt-1 text-ui-md font-semibold">纹理 / 阵列生成器</h1>
-              <p className="mt-1 text-ui-xs text-muted-foreground">
-                Electron + React + Canvas 实时预览，导出 PNG / JPEG / SVG
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="rounded-full border border-border bg-card px-3 py-1 text-ui-xs text-muted-foreground">
-                平台：{platform}
-              </div>
-              <ThemeToggle theme={theme} onToggle={toggleTheme} />
-            </div>
-          </header>
-
-          <section className="grid grid-cols-3 gap-3 border-b border-border px-6 py-4">
-            <StatCard icon={<ImageIcon className="h-4 w-4" />} label="底图尺寸" value={baseMeta} />
-            <StatCard icon={<Layers3 className="h-4 w-4" />} label="元素数量" value={`${elements.length}`} />
-            <StatCard icon={<Sparkles className="h-4 w-4" />} label="排布实例" value={`${placements.length}`} />
-          </section>
-
-          <div className="min-h-0 flex-1 p-4 md:p-6">
-            {baseAsset ? (
-              <PreviewCanvas baseAsset={baseAsset} elements={elements} placements={placements} />
-            ) : (
-              <EmptyState />
-            )}
-          </div>
-
-          <footer className="flex items-center justify-between border-t border-border px-6 py-3 text-ui-xs text-muted-foreground">
-            <span>{notice}</span>
-            <span>参数调整会实时刷新画布</span>
-          </footer>
-        </main>
-
-        <aside className="w-[380px] shrink-0 overflow-y-auto bg-background px-4 py-4">
-          <div className="space-y-4 pb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>素材管理</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <BaseImageUploader
-                  disabled={isLoading}
-                  baseAsset={baseAsset}
-                  onUpload={handleBaseUpload}
-                  onClear={() => {
-                    clearBaseImage();
-                    setNotice('已清空底图。');
-                  }}
-                />
-                <ElementsUploader disabled={isLoading} onUpload={handleElementsUpload} />
-                <ElementThumbList
-                  elements={elements}
-                  onRemove={(id, name) => {
-                    removeElement(id);
-                    setNotice(`已移除元素：${name}`);
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>参数控制</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <SliderField
-                  label="密度"
-                  hint="控制随机排布的实例数量，过高会增加计算与绘制压力。"
-                  min={1}
-                  max={2000}
-                  step={1}
-                  value={params.density}
-                  onChange={(value) => setParam('density', value)}
-                />
-                <SliderField
-                  label="基础尺寸"
-                  hint="按元素原始像素的倍数进行缩放。"
-                  min={0.1}
-                  max={3}
-                  step={0.01}
-                  value={params.baseSize}
-                  onChange={(value) => setParam('baseSize', value)}
-                  format={(value) => `${value.toFixed(2)}x`}
-                />
-                <SliderField
-                  label="元素间距"
-                  hint="正值时尽量避免元素重叠并保留间隔，负值时允许元素彼此压叠。"
-                  min={-120}
-                  max={120}
-                  step={1}
-                  value={params.spacing}
-                  onChange={(value) => setParam('spacing', value)}
-                  format={(value) => `${Math.round(value)}px`}
-                />
-                <SliderField
-                  label="边缘间距"
-                  hint="负值时元素可越过边缘且最多显示一半，0 时刚好贴边，正值时会与边缘保持距离。"
-                  min={-200}
-                  max={200}
-                  step={1}
-                  value={params.edgeMargin}
-                  onChange={(value) => setParam('edgeMargin', value)}
-                  format={(value) => `${Math.round(value)}px`}
-                />
-                <SliderField
-                  label="尺寸随机度"
-                  hint="0 表示所有元素同尺寸，1 表示最大随机波动。"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={params.sizeRandomness}
-                  onChange={(value) => setParam('sizeRandomness', value)}
-                  format={(value) => `${Math.round(value * 100)}%`}
-                />
-                <SliderField
-                  label="基础角度"
-                  hint="未启用完全随机时，元素会围绕该角度波动。"
-                  min={0}
-                  max={360}
-                  step={1}
-                  value={params.baseAngle}
-                  onChange={(value) => setParam('baseAngle', value)}
-                  format={(value) => `${Math.round(value)}°`}
-                />
-                <SliderField
-                  label="旋转随机度"
-                  hint="决定相对基础角度的随机偏移范围。"
-                  min={0}
-                  max={180}
-                  step={1}
-                  value={params.rotationRandomness}
-                  onChange={(value) => setParam('rotationRandomness', value)}
-                  format={(value) => `${Math.round(value)}°`}
-                />
-                <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-muted/40 px-3 py-3 text-ui-sm">
-                  <div>
-                    <div className="font-medium">完全随机旋转</div>
-                    <div className="mt-1 text-ui-xs text-muted-foreground">开启后将忽略基础角度，直接在 0 - 360 度间随机。</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-primary"
-                    checked={params.rotationFullRandom}
-                    onChange={(event) => setParam('rotationFullRandom', event.target.checked)}
-                  />
-                </label>
-                <SeedControl
-                  seed={params.seed}
-                  onSeedChange={(value) => setParam('seed', value)}
-                  onReshuffle={() => {
-                    reshuffle();
-                    setNotice('已刷新随机种子，生成新的排布结果。');
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>导出</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3 py-3 text-ui-xs text-muted-foreground">
-                  <Download className="mt-0.5 h-4 w-4 text-foreground" />
-                  <span>位图导出会使用离屏 Canvas 重新绘制，避免预览缩放带来的清晰度损失。</span>
-                </div>
-                <ExportBar baseAsset={baseAsset} elements={elements} placements={placements} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>当前状态</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-ui-sm text-muted-foreground">
-                <InfoLine icon={<Gauge className="h-4 w-4" />} text={`底图：${baseAsset ? baseAsset.name : '未加载'}`} />
-                <InfoLine icon={<Layers3 className="h-4 w-4" />} text={`元素：${elements.length} 个`} />
-                <InfoLine icon={<Gauge className="h-4 w-4" />} text={`元素间距：${Math.round(params.spacing)}px`} />
-                <InfoLine icon={<Gauge className="h-4 w-4" />} text={`边缘间距：${Math.round(params.edgeMargin)}px`} />
-                <InfoLine icon={<Sparkles className="h-4 w-4" />} text={`随机种子：${params.seed}`} />
-              </CardContent>
-            </Card>
-          </div>
-        </aside>
+  if(legacy)return <><LegacyEditor/><button className="legacy-return primary-button" onClick={()=>{setLegacy(false);document.documentElement.classList.remove('dark');}}>返回纹理工作台</button></>;
+  return <div className="studio">
+    <header className="studio-header">
+      <div className="studio-brand"><span className="brand-mark">t<span>g</span></span><div><h1>纹理工作台</h1><p>TEXTURE GENERATOR</p></div></div>
+      <div className="project-title"><input aria-label="项目名称" value={p.name} onChange={e=>s.edit(p=>{p.name=e.target.value.slice(0,80);},'project-name')}/><span>本地项目</span></div>
+      <div className="header-actions">
+        <button className="icon-button" title="撤销 ⌘Z" aria-label="撤销" disabled={!s.past.length} onClick={s.undo}><Undo2 size={17}/></button>
+        <button className="icon-button" title="重做 ⇧⌘Z" aria-label="重做" disabled={!s.future.length} onClick={s.redo}><Redo2 size={17}/></button>
+        <span className="toolbar-divider"/>
+        <button className="text-button" onClick={()=>{s.replace(newProject());setPlaying(false);setTime(0);s.message('已新建透明纹理项目，可撤销恢复上一作品。');}}>新建</button>
+        <button className="text-button" onClick={()=>openInput.current?.click()}><FolderOpen size={15}/>打开</button>
+        <button className="text-button" disabled={saving} onClick={save}><Save size={15}/>{saving?'保存中':'保存'}</button>
+        <button className="text-button legacy-link" onClick={()=>{setPlaying(false);setLegacy(true);}}>底图阵列</button>
+        <button className="primary-button" onClick={()=>{setPlaying(false);setExportOpen(true);}}><Download size={15}/>导出</button>
       </div>
+      <input ref={openInput} type="file" accept=".json,.texture.json,application/json" hidden onChange={e=>open(e.target.files?.[0])}/>
+    </header>
+    <div className="studio-workspace">
+      <Library onPreset={()=>{setTime(0);setPlaying(false);}} onPlace={()=>{setTiled(false);setPlaying(false);}}/>
+      <main className="canvas-workspace">
+        <div className="canvas-toolbar">
+          <div className="segmented"><button className={!tiled?'active':''} onClick={()=>setTiled(false)}>单元编辑</button><button className={tiled?'active':''} onClick={()=>setTiled(true)}>整面预览</button></div>
+          <div className="preview-controls">
+            <select aria-label="预览缩放" value={zoom??'fit'} onChange={e=>setZoom(e.target.value==='fit'?null:Number(e.target.value))}>
+              <option value="fit">适配</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="1">100%</option><option value="2">200%</option>
+            </select>
+            {tiled&&<label><input type="checkbox" checked={boundaries} onChange={e=>setBoundaries(e.target.checked)}/>单元边界</label>}
+            <select aria-label="透明检查背景" value={background} onChange={e=>setBackground(e.target.value as PreviewBackground)}>
+              <option value="checker">棋盘格</option><option value="light">浅色底</option><option value="dark">深色底</option><option value="custom">自定义底</option>
+            </select>{background==='custom'&&<input type="color" aria-label="预览底色" value={customBackground} onChange={e=>setCustomBackground(e.target.value)}/>}
+          </div>
+        </div>
+        {recovery&&<div className="recovery-banner"><span>有上次编辑的本地恢复副本</span><button onClick={()=>{try{s.replace(parseProject(localStorage.getItem('texture-recovery')!));s.message('已恢复上次作品');}catch(e){s.message(e instanceof Error?e.message:'恢复失败');}setRecovery(false);}}>恢复作品</button><button aria-label="关闭恢复提示" onClick={()=>setRecovery(false)}>忽略</button></div>}
+        <div className="canvas-meta"><span>{p.canvas.width} × {p.canvas.height}<i/> {p.canvas.seamless?'无缝重复单元':'普通画布'}</span>
+          <span>{scene?.count.toLocaleString()??'—'} 个对象{scene&&scene.count<scene.requested&&' · 间距 / 蒙版限制数量'}</span></div>
+        <StudioCanvas scene={scene} time={time} tiled={tiled} boundaries={boundaries} background={background} customBackground={customBackground} zoom={zoom} onPause={()=>setPlaying(false)} selection={advanced&&p.export.region==='selection'}/>
+        <div className="timeline">
+          <button className="play-button" aria-label={playing?'暂停':'播放'} onClick={()=>setPlaying(v=>!v)}>{playing?<Pause size={16}/>:<Play size={16}/>}</button>
+          <button className="icon-button" title="回到首帧" onClick={()=>{setTime(0);setPlaying(false);}}><RotateCcw size={14}/></button>
+          <span className="time-code">{time.toFixed(2)} s</span><input aria-label="时间定位" type="range" min="0" max={p.animation.duration} step="0.01" value={time} onChange={e=>{setPlaying(false);setTime(Number(e.target.value));}}/>
+          <span className="time-duration">{p.animation.duration.toFixed(1)} s 循环</span>
+        </div>
+        <footer className="studio-status"><span role="status">{s.notice}</span><span>{playing?'播放中':'可在任意帧导出'} · PNG / SVG / PNG 序列</span></footer>
+      </main>
+      <Inspector advanced={advanced} onAdvanced={setAdvanced}/>
     </div>
-  );
-}
-
-function StatCard({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm shadow-black/5">
-      <div className="flex items-center gap-2 text-ui-xs text-muted-foreground">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="mt-2 text-ui-md font-semibold text-foreground">{value}</div>
-    </div>
-  );
-}
-
-function InfoLine({ icon, text }: { icon: ReactNode; text: string }) {
-  return <div className="flex items-center gap-2">{icon}<span>{text}</span></div>;
+    {exportOpen&&<StudioExportPanel time={time} onClose={()=>setExportOpen(false)}/>}
+  </div>;
 }
