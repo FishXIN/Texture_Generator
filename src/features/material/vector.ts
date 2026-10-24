@@ -5,6 +5,7 @@ import { createParticles } from './particles';
 import { phaseSeed } from './animation';
 import { encodePng } from './png';
 import { materialFilename } from './export';
+import { outputDimensions } from './composition';
 
 export type VectorMode='pure'|'optimized'|'effect';
 const gray=(v:number)=>{const c=Math.round(Math.max(0,Math.min(1,v))*255);return`rgb(${c},${c},${c})`;};
@@ -12,6 +13,7 @@ export function vectorIssues(p:MaterialProject) {
   const issues:string[]=[];
   if(p.export.maps!=='height')issues.push('SVG 只输出黑白纹理；法线请使用 PNG');
   for(const l of p.layers.filter(l=>l.visible&&l.opacity>0)){
+    if(l.role&&l.role!=='texture'){issues.push(`${l.name}：原色素材需保留效果导出`);continue;}
     if(l.kind!=='particles'){issues.push(`${l.name}：连续纹理或效果需要位图`);continue;}
     if(l.softness>0)issues.push(`${l.name}：软边需要位图`);
     if(l.contrast!==1||l.bias!==0||l.invert)issues.push(`${l.name}：灰度调整需要效果模式`);
@@ -44,7 +46,7 @@ function monochromeSvg(svg:string,invert=false) {
 }
 export function materialSvg(p:MaterialProject,mode:Exclude<VectorMode,'effect'>='pure') {
   const issues=vectorIssues(p);if(issues.length)throw new Error(`无法纯矢量导出：${issues.join('；')}。请选择效果模式。`);
-  const size=p.export.size,defs:string[]=[],content:string[]=[],sources=new Map(p.sources.map(s=>[s.id,s]));
+  const dims=outputDimensions(p,p.export.size),defs:string[]=[],content:string[]=[],sources=new Map(p.sources.map(s=>[s.id,s]));
   const transparent=p.export.background==='transparent',white=p.export.pigment==='white',inverse=transparent&&!white;
   const paint=(v:number)=>gray(inverse?1-v:v);
   content.push(`<rect width="1" height="1" fill="${paint(1)}"/>`);
@@ -83,13 +85,14 @@ export function materialSvg(p:MaterialProject,mode:Exclude<VectorMode,'effect'>=
   }
   const actual=content.join('');
   const body=transparent?`<defs><mask id="pigment" x="0" y="0" width="1" height="1" maskUnits="userSpaceOnUse" mask-type="luminance" color-interpolation="sRGB">${actual}</mask></defs><rect width="1" height="1" fill="${white?'white':'black'}" mask="url(#pigment)"/>`:actual;
-  return`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size}" height="${size}" viewBox="0 0 1 1"><metadata>Texture Generator; mode=${mode}; raster=false; phase=${p.timeline.phase}</metadata><defs>${defs.join('')}</defs>${body}</svg>`;
+  return`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${dims.width}" height="${dims.height}" viewBox="0 0 1 1" preserveAspectRatio="none"><metadata>Texture Generator; mode=${mode}; raster=false; phase=${p.timeline.phase}</metadata><defs>${defs.join('')}</defs>${body}</svg>`;
 }
 export async function effectSvg(p:MaterialProject,maps:MaterialMaps) {
   if(p.export.maps!=='height')throw new Error('效果 SVG 只输出黑白纹理；法线请使用 PNG。');
   const png=await encodePng(maps,'height',p.export.depth,p.export.background==='transparent',p.export.pigment);
+  const w=maps.width??maps.size,h=maps.pixelHeight??maps.size;
   let binary='';for(let i=0;i<png.length;i+=8192)binary+=String.fromCharCode(...png.subarray(i,i+8192));
-  return`<svg xmlns="http://www.w3.org/2000/svg" width="${maps.size}" height="${maps.size}" viewBox="0 0 ${maps.size} ${maps.size}"><metadata>Texture Generator; mode=effect; embedded raster PNG ${p.export.depth}bit; phase=${p.timeline.phase}</metadata><image width="${maps.size}" height="${maps.size}" href="data:image/png;base64,${btoa(binary)}"/></svg>`;
+  return`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><metadata>Texture Generator; mode=effect; embedded raster PNG ${maps.composition?8:p.export.depth}bit; phase=${p.timeline.phase}</metadata><image width="${w}" height="${h}" href="data:image/png;base64,${btoa(binary)}"/></svg>`;
 }
 export const vectorOutput=(p:MaterialProject,svg:string,mode:VectorMode)=>({
   blob:new Blob([svg],{type:'image/svg+xml'}),filename:`${materialFilename(p)}_${mode}.svg`,extension:'svg',

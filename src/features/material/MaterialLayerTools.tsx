@@ -16,7 +16,7 @@ export function MaterialLayerTools({layer:l}:{layer:HeightLayer}) {
   const discrete=particle||['spray','dust','sand'].includes(l.kind);
   const usesInput=['film','oldphoto','copier','spray','airbrush','bleed','drybrush','pencil','charcoal','chalk','crayon','screen','stamp','wear','halftone','halftoneSquare','halftoneEllipse','halftoneLine','ditherRandom','ditherOrdered','glitch','compression','signal','particles'].includes(l.kind);
   return <>
-    {discrete&&<details open><summary>图形与分布</summary>
+    {discrete&&<details><summary>图形与分布</summary>
       {particle&&<SelectField label="图形形状" value={l.shape} disabled={disabled} onChange={v=>update({shape:v as HeightLayer['shape']})}>{Object.entries(particleShapes).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>}
       {l.kind!=='spray'&&<SelectField label="分布方式" value={l.distribution} disabled={disabled} onChange={v=>update({distribution:v as HeightLayer['distribution']})}>{Object.entries(distributions).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>}
       <Field label="图形数量" value={l.count} min={0} max={2000} disabled={disabled||l.distribution==='manual'} onChange={v=>update({count:v},'count')}/>
@@ -32,14 +32,13 @@ export function MaterialLayerTools({layer:l}:{layer:HeightLayer}) {
       <Field label="最大透明度" value={l.alphaMax} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({alphaMax:v,alphaMin:Math.min(v,l.alphaMin)},'alphaMax')}/>
       <Field label="图形边缘柔和" value={l.softness} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({softness:v},'softness')}/>
       {l.kind==='spray'&&<Field label="喷涂范围" value={l.coverage} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({coverage:v},'coverage')}/>}
-      {l.distribution==='spaced'&&<><Field label="中心最小间距" value={l.spacing} min={0} max={.2} step={.001} disabled={disabled} onChange={v=>update({spacing:v},'spacing')}/><p className="material-help">周期邻居也避让，尺寸包围范围参与间距。空间不足会减少数量；蓝噪 / 最小间距最多 512 个。</p></>}
+      {l.distribution==='spaced'&&<Field label="中心最小间距" value={l.spacing} min={0} max={.2} step={.001} disabled={disabled} onChange={v=>update({spacing:v},'spacing')}/>}
       {(l.distribution==='radial'||l.distribution==='kaleidoscope')&&<>
         <Field label="中心 X" value={l.centerX} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({centerX:v},'centerX')}/>
         <Field label="中心 Y" value={l.centerY} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({centerY:v},'centerY')}/>
         {l.distribution==='kaleidoscope'&&<Field label="对称扇区" value={l.sectors} min={2} max={16} disabled={disabled} onChange={v=>update({sectors:v},'sectors')}/>}
       </>}
       {l.distribution==='path'&&<div className="material-path">
-        <p className="material-help">路径按弧长等距采样，图形朝向跟随切线。</p>
         {l.path.map((point,i)=><div className="material-point" key={i}><span>{i+1}</span>
           {(['x','y'] as const).map(key=><input key={key} aria-label={`路径 ${i+1} ${key.toUpperCase()}`} type="number" min={0} max={1} step={.01} value={point[key]} disabled={disabled} onChange={e=>{const value=Number(e.target.value);if(value>=0&&value<=1){const path=structuredClone(l.path);path[i][key]=value;update({path},'path');}}}/>)}
           <button disabled={disabled||l.path.length<=2} onClick={()=>update({path:l.path.filter((_,j)=>j!==i)})}>×</button></div>)}
@@ -74,12 +73,10 @@ export function MaterialLayerTools({layer:l}:{layer:HeightLayer}) {
       <SelectField label={particle?'图形素材':'输入灰度 / Alpha'} value={l.sourceId} disabled={disabled} onChange={v=>update({sourceId:v,...(particle&&v?{shape:'custom' as const}:{})})}><option value="">使用程序化默认</option>{p.sources.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</SelectField>
       {!particle&&<><SelectField label="亮度响应" value={l.response} disabled={disabled} onChange={v=>update({response:v as HeightLayer['response']})}><option value="all">全画面</option><option value="dark">暗部</option><option value="edge">边缘</option><option value="alpha">Alpha 覆盖</option></SelectField><Toggle label="输入周期边缘融合" checked={l.tileSource} disabled={disabled} onChange={v=>update({tileSource:v})}/></>}
       {particle&&p.sources.length>1&&<>{p.sources.map(source=><Field key={source.id} label={`${source.name} 比例`} value={l.sourceMix.find(m=>m.id===source.id)?.weight??0} min={0} max={10} step={.1} disabled={disabled} onChange={v=>update({shape:'custom',sourceMix:[...l.sourceMix.filter(m=>m.id!==source.id),{id:source.id,weight:v}]},'mix')}/>)}</>}
-      <p className="material-help">先导入素材，再在此选择；原图灰度和 Alpha 独立保留。</p>
     </details>}
     {['noise','ridged','algorithm','creases','marble','contours','turbulence','smoke','terrain'].includes(l.kind)&&<details><summary>高级算法</summary>
       <SelectField label="底层算法" value={l.algorithm} disabled={disabled} onChange={v=>update({algorithm:v as HeightLayer['algorithm']})}>{Object.entries(algorithms).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>
       {['noise','ridged','creases','marble','contours'].includes(l.kind)&&<SelectField label="噪声组合" value={l.transform} disabled={disabled} onChange={v=>update({transform:v as HeightLayer['transform']})}><option value="fbm">fBm 多尺度</option><option value="turbulence">绝对值扰动</option><option value="ridged">脊线变换</option></SelectField>}
-      <p className="material-help">白噪声类是离散采样；Perlin / Simplex / Value 用于连续变化。周期构造保持平铺。</p>
     </details>}
     <details><summary>图层运动</summary>
       <SelectField label="运动方式" value={l.motion} disabled={disabled} onChange={v=>update({motion:v as HeightLayer['motion']})}>{Object.entries(motions).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>
@@ -88,7 +85,6 @@ export function MaterialLayerTools({layer:l}:{layer:HeightLayer}) {
         <Field label="循环次数" value={l.cycles} min={1} max={8} disabled={disabled} onChange={v=>update({cycles:v},'cycles')}/>
         <Field label="运动方向" value={l.motionDirection} min={-180} max={180} disabled={disabled} onChange={v=>update({motionDirection:v},'motionDirection')}/>
         <Toggle label="固定此层运动" checked={l.motionLocked} disabled={disabled} onChange={v=>update({motionLocked:v})}/>
-        <p className="material-help">整体漂移按整数单元行进；流场沿旋度场往返演化，涡旋按中心旋转。均通过周期计算闭合。</p>
       </>}
     </details>
   </>;

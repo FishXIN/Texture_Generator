@@ -1,6 +1,10 @@
 # 架构与目录约定
 
-本文对应 0.5.0。默认入口在同一 `MaterialProject` 内实现黑白连续场、图形、输入灰度 / Alpha 和循环动态；历史图形工作台保留在 `?studio=pattern`，原有项目格式不变。
+本文对应 0.6.0。默认入口在同一 `MaterialProject` 内实现黑白连续场、上传背景、原色元素、灰度 / Alpha 输入和循环动态；历史项目保留在 `?studio=pattern`。
+
+图层 `role` 区分 `texture`、`background` 和 `elements`，共用显隐、混合、不透明度和历史。`canvas` 保存宽高；导出最长边按比例缩放。旧项目补全正方形画布与 texture 角色。应用预设仅替换选中的纹理层或新增纹理，保留上传素材。
+
+`composition.ts` 在 Worker 的 OffscreenCanvas 中按原色 RGBA 合成背景、周期元素和纹理覆盖；`export.scope` 决定是否排除背景图。只输出程序化纹理时沿用 Float32 灰度及 8/16 位 PNG，原色合成输出 RGBA 8 位。法线只来自纹理场。
 
 ## 完整黑白纹理库
 
@@ -18,11 +22,13 @@
 
 每层可保存 `objects`、`sourceMix`、路径、算法和运动；项目保存 `timeline`。手工轮廓有独立种子，参数随机不改其形状。图层锁定控制编辑，对象 / 图层的运动锁定单独生效。
 
-原图保持嵌入；解码保存 `pixels`（高度中灰合成）、`gray` 和 `alpha` 三个通道。SVG 按最长边 1024 px 解码，位图只降采样。DOM 清理 / 路径采样在主线程，Worker 只接收数值。
+原图保持嵌入；解码保存 `pixels`（高度中灰合成）、`gray`、`alpha` 和 `rgba`。预览最长边 1024 px；正式导出保留位图原始细节，SVG 按所需尺寸解码。DOM 清理 / 路径采样在主线程。
 
 连续字段使用解析或局部差分梯度；离散白噪声的格点内部梯度为零。预览 / 导出共用 UV 和 phase。流场先计算周期 RK4 位移网格，再用 bicubic 插值和导数映射采样梯度；没有逐帧累积误差。图形按实例轨迹计算，漂移走整数单元，其他连续模式用周期三角函数。
 
-静态 512 px 预览，播放时 192 px，渲染完成后再请求下一帧，避免无界堆积。参数改变会取消旧 Worker。序列最多 128 百万总像素。SVG 图形导出在主线程清理结构；位图 / 效果 / 序列在 Worker 内执行，可终止。
+`useMaterialPreview.ts` 使用常驻 Worker，单任务执行期间记录更新，完成后读取最新项目；参数变化不终止预览。静态 512 px，拖动 / 播放 192 px，复杂帧自动降至 128 px；松手补上 512 px。解码素材由 Worker 缓存，未改变素材时不重复传输。`StudioFields.tsx` 采用临界阻尼，松手提交准确目标；store 合并整次拖动的历史。画布 CSS 按宽高比固定显示尺寸，低分辨率帧不会缩小画面。
+
+序列最多 128 百万总像素。SVG 图形导出在主线程清理结构；位图 / 效果 / 序列使用独立 Worker，可终止。
 
 数学、文件和界面验证见 `tests/library.spec.ts`；逐项清单和模拟边界见 [能力对照](texture-coverage.md)。
 
@@ -58,11 +64,11 @@ flowchart LR
   Normal --> ZIP
 ```
 
-项目使用 `kind: surface-material` 与 `.material.json`，保存最多 20 步历史。8 个图层、4 个源；逐项验证类型、范围、唯一 ID 和引用。解码源最长边上限 1024 px，保留原始嵌入数据。SVG 在实际解码前重新清理；禁止远程位图 URL。
+项目使用 `kind: surface-material` 与 `.material.json`，保存最多 20 步历史。16 个图层、16 个源；逐项验证类型、范围、唯一 ID 和引用。SVG 在实际解码前重新清理；禁止远程位图 URL。
 
 引擎按归一化 UV 采样。整数周期 value noise、quintic 插值、周期 feature points、整数方向波向量和周期 domain warp 保持四边连续。所有图层运算也变换解析梯度，因此法线对应最终灰度。预览和不同导出尺寸在同一 UV 得到相同值。
 
-预览与正式导出使用独立 Worker；更新参数或取消终止对应 Worker，返回的旧任务不会覆盖新图。Worker 内完成 PNG 编码和 ZIP 打包。灰度 PNG 为 type 0；透明黑白为 type 4，黑色 gray=0、alpha=1−height，白色 gray=1、alpha=height；法线 type 2。16 位从浮点场大端写入，zlib 与 CRC32 遵循 PNG 格式，不经过 Canvas 降至 8 位。
+预览与正式导出使用独立 Worker；预览持续取最新参数，取消导出则终止对应 Worker。Worker 内完成 PNG 编码和 ZIP 打包。灰度 PNG 为 type 0；透明黑白为 type 4，黑色 gray=0、alpha=1−height，白色 gray=1、alpha=height；法线 type 2；原色素材合成为 type 6。16 位从浮点场大端写入，zlib 与 CRC32 遵循 PNG 格式，不经过 Canvas 降至 8 位。
 
 `generatorControls` 统一定义生成器标签；119 个预设附分类元数据。旧项目缺少新参数时由解析器补全，不改变种子；coverage 缺失时按旧 detail 公式恢复。纸张纤维、光晕与 Gabor 核采用紧支撑保证周期边缘。
 

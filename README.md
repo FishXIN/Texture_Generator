@@ -8,12 +8,16 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 
 [Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
 
-**Main contains the 0.5.0 source. Existing release installers retain their older capabilities; check the attached version.**
+**Main contains the 0.6.0 source. Existing release installers retain their older capabilities; check the attached version.**
 
 ![Monochrome texture studio](docs/images/texture-studio.png)
 
 ### Monochrome textures
 
+- One flat workspace combines monochrome textures, uploaded backgrounds and colored PNG/SVG elements in the same layer stack. Applying presets preserves uploaded artwork.
+- Common adjustments appear first. Algorithms, seeds and optional normal output are tucked into advanced settings.
+- Damped sliders update the canvas while dragging; a persistent worker renders the latest parameters and restores full preview detail on release.
+- Background upload preserves the original aspect ratio. Export the whole canvas or just the materials, excluding the background image; colored compositions use 8-bit RGBA.
 - 119 editable presets across 11 searchable visual groups: grain, fragments, film, paper, nature, painting, surfaces, digital, halftone, graphics and soft light.
 - Unified particles, editable paths, radial/mirror/kaleidoscope layouts, manual dragging, SVG stamps and weighted source mixing.
 - Independent particle density, size, grayscale and alpha ranges; safe original inputs retain separate grayscale and Alpha.
@@ -45,13 +49,13 @@ The default is an 8-bit grayscale PNG with normal output disabled. Export sizes 
 
 Paper and stone presets are procedural style simulations, not physical scans.
 
-Limits: eight layers, four imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Imported sources decode at up to 1024 px; height layers composite transparency onto middle gray while graphic/printing layers retain Alpha. Periodic blending changes the input. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; animation preview is 192 px. High-detail 4K rendering can take longer.
+Limits: sixteen layers and imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Preview sources decode at up to 1024 px; exports decode original raster detail and render SVG at the requested resolution. Procedural image inputs still use separate gray/Alpha channels. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; dragging and animation use 192 px.
 
 No colored material channels, 3D viewport, node editor or model baking is included. See [implementation and boundaries](docs/material-studio.md).
 
 ### Graphic and motion workspace
 
-Open the lower-left link or `?studio=pattern` for the existing 0.2.0 workflow. Opening an older `.texture.json` routes to this workspace.
+Open “打开旧版项目” in the project menu or `?studio=pattern` for the existing 0.2.0 workflow. Opening an older `.texture.json` routes to this workspace.
 
 - Circles, ellipses, short lines and fragments with independent density, size, color and opacity.
 - Multiple layers with visibility, locking, duplication, ordering and blend modes.
@@ -121,11 +125,15 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 [English](#english) · [产品策划](docs/product-plan.md) · [能力对照](docs/texture-coverage.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [变更记录](CHANGELOG.md) · [已发布安装包](https://github.com/FishXIN/Texture_Generator/releases)
 
-> 主分支为 **0.5.0** 工作台源码。GitHub Releases 中的旧版安装包仍是旧功能，以附件版本为准。
+> 主分支为 **0.6.0** 工作台源码。GitHub Releases 中的旧版安装包仍是旧功能，以附件版本为准。
 
 ![黑白纹理工作台实际界面](docs/images/texture-studio.png)
 
 ### 黑白纹理工作台
+
+纹理和上传素材共用一个画布、同一组图层。直接上传背景与 PNG / SVG 元素，保留原图颜色和透明度；选择纹理预设不会清空素材。背景上传自动沿用原图比例，可导出完整画布，或仅导出不含背景图的素材。
+
+界面采用浅灰扁平布局，默认展示常用调整；算法、种子、运动细节与法线收进高级设置。滑块带轻阻尼，拖动时中心效果持续更新，松开后恢复清晰预览，一次撤销还原整次拖动。
 
 默认打开黑白素材画布。内置 **119 个可编辑预设、11 个视觉分类**。颗粒、点与碎片、胶片、纸张、自然连续、绘画印刷、表面、数字故障、网点 / 波谱、图形、柔光分别筛选，算法放在高级面板。
 
@@ -149,13 +157,13 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 这些效果是可重复编辑的程序化模拟，适合设计素材制作；纸张和石材不标为实物扫描。
 
-| 能力 | 0.5.0 |
+| 能力 | 0.6.0 |
 | --- | --- |
 | 连续纹理 | 周期多尺度噪声、脊线、细胞 / 裂纹、方向纹路与平滑随机斑点 |
 | 精细控制 | 按纹理显示纤维密度、柔和度、脉络宽度、网点覆盖、光斑范围等参数；密度与权重独立 |
 | 多图层 | 显隐、锁定、复制、排序、删除；混合、细节叠加、正片叠底、变亮 |
-| 检查 | 单元与 3 × 3 平铺，边界辅助线；透明素材在棋盘格 / 浅色 / 深色底检查 |
-| 灰度源 | 本地导入 PNG / JPEG / WebP / SVG；保留原始源，可选周期边缘融合 |
+| 检查 | 单元与 3 × 3 平铺；透明素材在棋盘格 / 白底 / 黑底检查 |
+| 上传素材 | 本地导入 PNG / JPEG / WebP / SVG 背景和元素；保留原色与 Alpha，也可在更多调整里上传蒙版 |
 | 项目 | `.material.json` 保存、打开、撤销重做、本地恢复 |
 | 可选法线 | 同一灰度场导出切线空间法线，OpenGL / DirectX 与独立强度 |
 | 本地处理 | 预览与正式生成在 Worker 中执行，导出有进度、可取消并重试 |
@@ -164,6 +172,7 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 | 出口 | 用法 |
 | --- | --- |
+| 上传素材合成 PNG · RGBA 8 位 | 保留原色与透明度，输出整面画布或仅素材 |
 | 黑白 PNG · 8 / 16 位 | 真灰度；在平面设计软件中选择正片叠底，白色保留底图；也可作为灰度蒙版或高度 |
 | 透明 PNG · 8 / 16 位 | 纯黑纹理＋Alpha，白色转透明；直接叠加到作品上 |
 | 白色透明 PNG · 8 / 16 位 | 白色光晕＋Alpha，亮度作为透明度；用于柔光叠加 |
@@ -175,13 +184,13 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 导出 128–4096 px，预览 512 px；16 位从浮点灰度直接编码，保留超过 256 级的细节。默认导出黑白 8 位 PNG，法线默认关闭。柔光类不透明图可使用滤色或柔光混合，透明白色版可直接增加光晕。透明衬底与预览边界不会写入文件。旧 0.3.0 项目可打开，新参数自动补全。
 
-最多 8 层、4 导入源、每层 2000 个普通图形，蓝噪 / 最小间距最多 512 个；单个素材 5 MB，项目 25 MB。导入源解码上限 1024 px；高度层透明区域按中灰读取，图形 / 印刷层保留独立 Alpha。序列总像素上限 128 百万。静态预览 512 px，动态 192 px。周期融合会修改原图，关闭后不保证无缝。
+最多 16 层、16 个素材、每层 2000 个普通图形，蓝噪 / 最小间距最多 512 个；单个素材 5 MB，项目 25 MB。预览素材解码上限 1024 px；导出重新读取原图细节，SVG 按导出尺寸解码。纯纹理保留真 8 / 16 位灰度，上传素材合成为 8 位 RGBA。序列总像素上限 128 百万。静态预览 512 px，拖动和动态 192 px。上传背景并不自动融合边缘；纹理与元素保留周期平铺逻辑。
 
 不包含彩色材质、3D 预览、节点编辑器或模型烘焙。用于高度 / 法线时请按 Non-Color 数据读取；目标软件的导入设置仍需核对。[实现与边界](docs/material-studio.md)。
 
 ### 图形与动态工作台
 
-通过左下角入口或 `?studio=pattern` 打开既有 0.2.0 工作流；旧 `.texture.json` 项目自动转到这个入口。
+通过项目菜单中的「打开旧版项目」或 `?studio=pattern` 打开既有 0.2.0 工作流；旧 `.texture.json` 项目自动转到这个入口。
 
 | 能力 | 0.2.0 |
 | --- | --- |

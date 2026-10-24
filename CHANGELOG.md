@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### 0.6.0 Unified minimal workbench
+
+- Combined uploaded backgrounds, original-color PNG/SVG elements and monochrome textures in one layer stack. Applying presets preserves uploaded artwork.
+- Added direct background/element upload, batch element mixing, original aspect ratios and full-canvas/material-only export.
+- Replaced repeated previews, permanent technical labels and output explanations with a flat neutral workspace and contextual advanced settings.
+- Added critically damped sliders, exact numeric input and one-step gesture undo. A persistent preview worker processes the latest parameters continuously during dragging, then restores detailed preview.
+- Preserved source RGB/Alpha in RGBA PNG, effects SVG and sequences; pure procedural PNG retains true 8/16-bit gray/Alpha. Original assets are decoded again for exports.
+- Added browser checks for repeated canvas updates while the pointer stays pressed, exact release, undo, keyboard, locks, colored/transparent artwork, preset retention, aspect ratio and project/export round trips.
+
 ### 0.5.0 Complete monochrome library
 
 - Expanded to 119 presets in 11 visual groups, with unified continuous fields, graphic particles, input grayscale/Alpha and animation.

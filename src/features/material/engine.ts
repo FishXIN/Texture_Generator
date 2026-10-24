@@ -3,11 +3,12 @@ import { algorithmField } from './algorithms';
 import { particleField } from './particles';
 import { motionAttributes, motionMap, phaseSeed } from './animation';
 import { effectField, sourceChannels } from './effects';
+import { outputDimensions, renderComposition } from './composition';
 
 export type Sample = { h: number; du: number; dv: number };
-export type DecodedSource = { id: string; width: number; height: number; pixels: Float32Array; gray?:Float32Array; alpha?:Float32Array };
-export type MaterialMaps = { size: number; height: Float32Array; normal: Uint8ClampedArray };
-type Field = (u: number, v: number, out: Sample) => void;
+export type DecodedSource = { id: string; width: number; height: number; pixels: Float32Array; gray?:Float32Array; alpha?:Float32Array; rgba?:Uint8ClampedArray; originalWidth?:number; originalHeight?:number };
+export type MaterialMaps = { size: number; height: Float32Array; normal: Uint8ClampedArray; width?:number; pixelHeight?:number; composition?:Uint8ClampedArray };
+type Field = ((u: number, v: number, out: Sample) => void) & {value?:(u:number,v:number)=>number};
 const TAU = Math.PI * 2;
 const mod = (x: number, n: number) => ((x % n) + n) % n;
 const frac = (x: number) => x - Math.floor(x);
@@ -309,7 +310,7 @@ function imageField(source: DecodedSource, seamless: boolean): Field {
     o.dv = (a.dv * wx + b.dv * (1 - wx)) * wy + (c.dv * wx + d.dv * (1 - wx)) * (1 - wy) + (top - bottom) * dy;
   };
 }
-function layerField(l: HeightLayer, sources: DecodedSource[],phase=0,frames=72): Field {
+function layerField(l: HeightLayer, sources: DecodedSource[],phase=0,frames=72,valueOnly=false): Field {
   l={...l,seed:phaseSeed(l,phase,frames)};
   let base: Field;
   if (l.kind === 'image') {
@@ -330,6 +331,10 @@ function layerField(l: HeightLayer, sources: DecodedSource[],phase=0,frames=72):
   else if (l.kind === 'glow' || l.kind === 'bokeh') base = lights(l);
   else if(l.kind==='fibers'||l.kind==='woven'||l.kind==='waves')base=directional(l);
   else base=effectField(l,sources);
+  if(valueOnly&&base.value){
+    const value=base.value;
+    base=(u,v,o)=>{o.h=value(u,v);o.du=o.dv=0;};
+  }
   if(l.kind!=='particles'&&!l.motionLocked&&l.motion!=='none'&&l.motion!=='refresh'){
     const still=base,attributes=motionAttributes(l,phase),map=motionMap(l,phase);
     base=(u,v,o)=>{
@@ -354,8 +359,8 @@ function layerField(l: HeightLayer, sources: DecodedSource[],phase=0,frames=72):
     o.h = Math.max(0, Math.min(1, value)); o.du *= gain; o.dv *= gain;
   };
 }
-export function createSampler(p: MaterialProject, sources: DecodedSource[] = [],phase=p.timeline?.phase??0): Field {
-  const layers = p.layers.filter(l => l.visible && l.opacity > 0).map(l => ({ l, field: layerField(l, sources,phase,Math.round((p.timeline?.duration??3)*(p.timeline?.fps??24))) }));
+export function createSampler(p: MaterialProject, sources: DecodedSource[] = [],phase=p.timeline?.phase??0,valueOnly=false): Field {
+  const layers = p.layers.filter(l => l.visible && l.opacity > 0 && (!l.role||l.role==='texture')).map(l => ({ l, field: layerField(l, sources,phase,Math.round((p.timeline?.duration??3)*(p.timeline?.fps??24)),valueOnly) }));
   const t = scratch();
   return (u, v, o) => {
     o.h = 1; o.du = o.dv = 0;
@@ -377,14 +382,17 @@ export function encodeNormal(du: number, dv: number, strength: number, directX: 
   out[offset + 1] = directX ? 255 - g : g;
   out[offset + 2] = Math.round((inv * 0.5 + 0.5) * 255); out[offset + 3] = 255;
 }
-export function renderMaterial(p: MaterialProject, size: number, sources: DecodedSource[] = [], progress?: (v: number) => void,phase=p.timeline?.phase??0): MaterialMaps {
-  const sample = createSampler(p, sources,phase), t = scratch(), height = new Float32Array(size * size), normal = new Uint8ClampedArray(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      sample(x / size, y / size, t); const k = y * size + x;
-      height[k] = t.h; encodeNormal(t.du, t.dv, p.normal.strength, p.normal.convention === 'directx', normal, k * 4);
+export function renderMaterial(p: MaterialProject, size: number, sources: DecodedSource[] = [], progress?: (v: number) => void,phase=p.timeline?.phase??0,preview=false): MaterialMaps {
+  const dims=outputDimensions(p,size),w=dims.width,h=dims.height;
+  const sample = createSampler(p, sources,phase,preview), t = scratch(), height = new Float32Array(w * h), normal = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      sample(x / w, y / h, t); const k = y * w + x;
+      height[k] = t.h; if(!preview)encodeNormal(t.du, t.dv, p.normal.strength, p.normal.convention === 'directx', normal, k * 4);
     }
-    if (y % 32 === 0) progress?.(y / size);
+    if (y % 32 === 0) progress?.(y / h);
   }
-  progress?.(1); return { size, height, normal };
+  const compositionLayers=p.layers.filter(l=>l.visible&&l.opacity>0&&(p.export.scope!=='material'||l.role!=='background'));
+  const composition=compositionLayers.some(l=>l.role&&l.role!=='texture')?renderComposition({...p,layers:compositionLayers},w,h,sources,phase,l=>layerField(l,sources,phase,Math.round(p.timeline.duration*p.timeline.fps),true)):undefined;
+  progress?.(1); return { size, height, normal, width:w, pixelHeight:h, composition };
 }

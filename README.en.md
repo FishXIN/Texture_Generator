@@ -4,12 +4,16 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 
 [简体中文](README.md#简体中文) · [Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
 
-**Main contains the 0.5.0 source. Existing release installers retain their older capabilities; check the attached version.**
+**Main contains the 0.6.0 source. Existing release installers retain their older capabilities; check the attached version.**
 
 ![Monochrome texture studio](docs/images/texture-studio.png)
 
 ## Monochrome textures
 
+- One flat workspace combines monochrome textures, uploaded backgrounds and colored PNG/SVG elements. Preset selection keeps uploaded artwork.
+- Common adjustments appear first; algorithms, seeds and optional normal output live in advanced settings.
+- Damped sliders update the central canvas throughout dragging. A persistent worker renders the latest parameters and restores detailed preview on release.
+- Background upload preserves aspect ratio. Export the whole canvas or materials without the background image; compositions retain color and Alpha as 8-bit RGBA.
 - 119 editable presets across 11 searchable visual groups, with unified continuous fields, graphic particles, input grayscale/Alpha and animation.
 - Twelve layouts: random, grid, stagger, cluster, spaced, blue noise, gradient, radial, editable/SVG path, mirror, kaleidoscope and manual dragging.
 - Independent particle size, grayscale and Alpha ranges; weighted SVG input mixing and persistent manual outline seeds.
@@ -41,13 +45,13 @@ The default is an 8-bit grayscale PNG with normal output disabled. Export sizes 
 
 Paper and stone presets are procedural style simulations, not physical scans.
 
-Limits: eight layers, four imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Imported sources retain separate grayscale and Alpha at up to 1024 px. Height layers composite transparency onto middle gray, while graphics/printing use the original Alpha. Periodic blending changes the input. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; animation is 192 px.
+Limits: sixteen layers and imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Preview sources decode at up to 1024 px; exports read original raster detail and decode SVG at the requested resolution. Pure textures retain true 8/16-bit gray/Alpha. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; dragging and animation use 192 px.
 
 No colored material channels, 3D viewport, node editor or model baking is included. See [implementation and boundaries](docs/material-studio.md).
 
 ## Graphic and motion workspace
 
-Open the lower-left link or `?studio=pattern` for the existing 0.2.0 workflow. Opening an older `.texture.json` routes to this workspace.
+Open “打开旧版项目” in the project menu or `?studio=pattern` for the existing 0.2.0 workflow. Opening an older `.texture.json` routes to this workspace.
 
 - Circles, ellipses, short lines and fragments with independent density, size, color and opacity.
 - Multiple layers with visibility, locking, duplication, ordering and blend modes.

@@ -1,8 +1,8 @@
 {
   "name": "texture-generator",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
-  "description": "A local monochrome texture studio for seamless patterns, Multiply overlays, transparent PNGs and optional normal maps.",
+  "description": "A local texture workbench combining seamless monochrome textures, uploaded artwork and live parameter editing.",
   "author": "Texture Generator",
   "license": "MIT",
   "main": "dist-electron/main.js",

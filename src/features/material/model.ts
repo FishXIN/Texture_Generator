@@ -105,6 +105,7 @@ export const generatorControls: Record<Generator, { scale: string; detail?: stri
 };
 export type HeightLayer = {
   id: string; name: string; visible: boolean; locked: boolean; kind: Generator;
+  role: 'texture' | 'background' | 'elements'; fit: 'fill' | 'fit' | 'tile';
   seed: number; scale: number; octaves: number; detail: number; warp: number;
   direction: 'horizontal' | 'vertical' | 'diagonal';
   contrast: number; bias: number; invert: boolean; opacity: number;
@@ -120,14 +121,16 @@ export type HeightLayer = {
 export type HeightSource = { id: string; name: string; original: string; mime: string; width: number; height: number };
 export type MaterialProject = {
   kind: 'surface-material'; version: 1; name: string; layers: HeightLayer[]; sources: HeightSource[];
+  canvas: { width: number; height: number };
   normal: { strength: number; convention: 'opengl' | 'directx' };
-  export: { size: number; depth: 8 | 16; maps: 'both' | 'height' | 'normal'; background: 'white' | 'transparent'; pigment: 'black' | 'white' };
+  export: { size: number; depth: 8 | 16; maps: 'both' | 'height' | 'normal'; background: 'white' | 'transparent'; pigment: 'black' | 'white'; scope: 'canvas' | 'material' };
   timeline:{duration:number;fps:number;phase:number};
 };
 export const materialId = () => crypto.randomUUID();
 export const copyMaterial = (p: MaterialProject) => structuredClone(p);
 export const heightLayer = (kind: Generator = 'noise', patch: Partial<HeightLayer> = {}): HeightLayer => ({
   id: materialId(), name: generators[kind], visible: true, locked: false, kind,
+  role: 'texture', fit: 'fill',
   seed: 74291, scale: 6, octaves: 4, detail: 0.52, warp: 0.25,
   direction: 'horizontal', contrast: 1.35, bias: 0, invert: false, opacity: 1,
   coverage: 0.55, softness: 0.35,
@@ -242,8 +245,9 @@ export function newMaterial(preset: string = 'paper'): MaterialProject {
   const entry = materialPresets.find(p => p.id === preset) ?? materialPresets[0];
   return {
     kind: 'surface-material', version: 1, name: `${entry.name.replace(/^\d+\s*/,'')}纹理`,
+    canvas: { width: 2048, height: 2048 },
     layers: entry.layers(), sources: [], normal: { strength: 0.65, convention: 'opengl' },timeline:{duration:3,fps:24,phase:0},
-    export: { size: 2048, depth: 8, maps: 'height', background: 'white', pigment:entry.group === 'light' ? 'white' : 'black' },
+    export: { size: 2048, depth: 8, maps: 'height', background: 'white', pigment:entry.group === 'light' ? 'white' : 'black', scope: 'canvas' },
   };
 }
 export const isSeamless = (p: MaterialProject) => p.layers.filter(l => l.visible && l.opacity > 0).every(l => !l.sourceId || l.kind==='particles' || l.tileSource);
@@ -260,7 +264,7 @@ export function parseMaterial(text: string): MaterialProject {
   object(p);
   if (p.kind !== 'surface-material' || p.version !== 1) throw new Error('不是受支持的材质项目');
   str(p.name, 80);
-  if (!Array.isArray(p.layers) || p.layers.length > 8 || !Array.isArray(p.sources) || p.sources.length > 4) throw new Error('最多 8 个高度层、4 个导入源');
+  if (!Array.isArray(p.layers) || p.layers.length > 16 || !Array.isArray(p.sources) || p.sources.length > 16) throw new Error('最多 16 个图层、16 个素材');
   const ids = new Set<string>();
   const id = (v: string) => { if (typeof v !== 'string' || !/^[\w-]{1,100}$/.test(v) || ids.has(v)) throw new Error('项目 ID 无效或重复'); ids.add(v); };
   for (const s of p.sources) {
@@ -272,6 +276,10 @@ export function parseMaterial(text: string): MaterialProject {
   }
   for (const l of p.layers) {
     object(l); id(l.id); str(l.name); choice(l.kind, Object.keys(generators));
+    if (l.role === undefined) l.role = 'texture';
+    if (l.fit === undefined) l.fit = 'fill';
+    choice(l.role, ['texture','background','elements']); choice(l.fit, ['fill','fit','tile']);
+    if (l.role === 'background' && l.kind !== 'image' || l.role === 'elements' && l.kind !== 'particles') throw new Error('素材图层类型无效');
     bool(l.visible); bool(l.locked); bool(l.invert); bool(l.tileSource);
     if (l.coverage === undefined) l.coverage = l.kind === 'spots' ? .25 + l.detail * .75 : 0.55;
     if (l.softness === undefined) l.softness = 0.35;
@@ -293,7 +301,7 @@ export function parseMaterial(text: string): MaterialProject {
     num(l.amplitude,0,.5);num(l.cycles,1,8,true);num(l.motionDirection,-360,360);bool(l.motionLocked);
     if(!Array.isArray(l.path)||l.path.length<2||l.path.length>128)throw new Error('路径需要 2–128 个节点');
     for(const q of l.path){object(q);num(q.x,0,1);num(q.y,0,1);}
-    if(!Array.isArray(l.objects)||l.objects.length>2000||!Array.isArray(l.sourceMix)||l.sourceMix.length>4)throw new Error('图形数量超出范围');
+    if(!Array.isArray(l.objects)||l.objects.length>2000||!Array.isArray(l.sourceMix)||l.sourceMix.length>16)throw new Error('图形数量超出范围');
     for(const q of l.sourceMix){object(q);str(q.id,100);num(q.weight,0,10);if(!p.sources.some(s=>s.id===q.id))throw new Error('混排素材不存在');}
     for(const q of l.objects){
       object(q);id(q.id);num(q.x,0,1);num(q.y,0,1);num(q.size,.0001,.4);num(q.angle,-720,720);num(q.aspect,.1,10);num(q.gray,0,1);num(q.opacity,0,1);
@@ -303,6 +311,8 @@ export function parseMaterial(text: string): MaterialProject {
     }
   }
   if(p.timeline===undefined)p.timeline={duration:3,fps:24,phase:0};
+  if(p.canvas===undefined)p.canvas={width:p.export.size,height:p.export.size};
+  object(p.canvas);num(p.canvas.width,1,8192,true);num(p.canvas.height,1,8192,true);
   object(p.timeline);num(p.timeline.duration,.25,30);num(p.timeline.fps,1,60,true);num(p.timeline.phase,0,1);
   object(p.normal); num(p.normal.strength, 0, 2); choice(p.normal.convention, ['opengl', 'directx']);
   object(p.export); num(p.export.size, 128, 4096, true);
@@ -311,6 +321,8 @@ export function parseMaterial(text: string): MaterialProject {
   choice(p.export.maps, ['both', 'height', 'normal']);
   choice(p.export.background, ['white', 'transparent']);
   if (p.export.pigment === undefined) p.export.pigment = 'black';
+  if (p.export.scope === undefined) p.export.scope = 'canvas';
+  choice(p.export.scope, ['canvas','material']);
   choice(p.export.pigment, ['black', 'white']);
   return p;
 }

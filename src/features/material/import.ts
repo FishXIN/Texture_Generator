@@ -5,8 +5,8 @@ import type { DecodedSource } from './engine';
 import type { Point } from './algorithms';
 
 const cache = new Map<string, Promise<DecodedSource>>();
-export async function decodeSource(source: HeightSource): Promise<DecodedSource> {
-  const key = `${source.id}:${source.original}`;
+export async function decodeSource(source: HeightSource, limit = 1024): Promise<DecodedSource> {
+  const key = `${limit}:${source.id}:${source.original}`;
   if (cache.has(key)) return cache.get(key)!;
   const work = (async () => {
     const svg = source.mime === 'image/svg+xml' ? sanitizeSvg(source.original, source.name).svg : '';
@@ -15,7 +15,7 @@ export async function decodeSource(source: HeightSource): Promise<DecodedSource>
     try {
       const image = new Image(); image.src = url; await image.decode();
       if (image.naturalWidth < 1 || image.naturalHeight < 1 || image.naturalWidth > 8192 || image.naturalHeight > 8192) throw new Error('图像尺寸需在 1–8192 像素范围内');
-      const ratio = source.mime==='image/svg+xml'?1024/Math.max(image.naturalWidth,image.naturalHeight):Math.min(1, 1024 / Math.max(image.naturalWidth, image.naturalHeight));
+      const ratio = source.mime==='image/svg+xml'?limit/Math.max(image.naturalWidth,image.naturalHeight):Math.min(1, limit / Math.max(image.naturalWidth, image.naturalHeight));
       const width = Math.max(1, Math.round(image.naturalWidth * ratio)), height = Math.max(1, Math.round(image.naturalHeight * ratio));
       const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d')!; ctx.drawImage(image, 0, 0, width, height);
@@ -25,7 +25,7 @@ export async function decodeSource(source: HeightSource): Promise<DecodedSource>
         gray[i]=(data[i * 4] * 0.2126 + data[i * 4 + 1] * 0.7152 + data[i * 4 + 2] * 0.0722)/255;
         alphaChannel[i]=alpha;pixels[i]=gray[i]*alpha+.5*(1-alpha);
       }
-      return { id: source.id, width, height, pixels, gray, alpha:alphaChannel };
+      return { id: source.id, width, height, pixels, gray, alpha:alphaChannel, rgba:new Uint8ClampedArray(data), originalWidth:image.naturalWidth, originalHeight:image.naturalHeight };
     } finally { URL.revokeObjectURL(url); }
   })();
   cache.set(key, work);
@@ -45,8 +45,7 @@ export async function importHeight(file: File): Promise<{ source: HeightSource; 
     });
   }
   const source: HeightSource = { id: materialId(), name: file.name.slice(0, 200), mime, original, width: 1, height: 1 };
-  const decoded = await decodeSource(source); source.width = decoded.width; source.height = decoded.height;
-  warnings.push('原图、独立灰度和 Alpha 均保留；高度层透明区域按中灰读取。图形/印刷层使用原 Alpha；解码上限 1024 px。');
+  const decoded = await decodeSource(source); source.width = decoded.originalWidth ?? decoded.width; source.height = decoded.originalHeight ?? decoded.height;
   return { source, warnings };
 }
 export function sampleSvgPath(source:HeightSource):Point[] {

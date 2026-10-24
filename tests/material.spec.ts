@@ -106,19 +106,21 @@ test('PNG exports contain actual 16-bit grayscale and clean black alpha with ind
 });
 
 test('2D interface saves and reopens, cancels 4K export and retries a transparent PNG', async ({page})=>{
-  await expect(page.getByLabel('黑白纹理预览')).toBeVisible();
+  await expect(page.getByLabel('画布预览')).toBeVisible();
   await expect(page.getByRole('button',{name:'3D 表面'})).toHaveCount(0);
   await expect(page.getByRole('heading',{name:'3D 预览'})).toHaveCount(0);
   await page.getByRole('button',{name:/02 颗粒斑点/}).click();
-  await page.getByLabel('背景方式',{exact:true}).selectOption('transparent');
+  await page.getByLabel('画布底色',{exact:true}).selectOption('transparent');
   await expect(page.getByLabel('透明检查底色')).toBeVisible();
   await page.getByLabel('纹理项目名称').fill('测试黑色颗粒');
-  const save=page.waitForEvent('download');await page.getByRole('button',{name:'保存',exact:true}).click();
+  await page.getByRole('button',{name:'项目菜单'}).click();
+  const save=page.waitForEvent('download');await page.getByRole('button',{name:'保存项目',exact:true}).click();
   const saved=await save, path=await saved.path();expect(path).toBeTruthy();
-  await page.getByRole('button',{name:'新建',exact:true}).click();
+  await page.getByRole('button',{name:'项目菜单'}).click();
+  await page.getByRole('button',{name:'新建项目',exact:true}).click();
   await page.locator('input[type=file]').first().setInputFiles(path!);
   await expect(page.getByLabel('纹理项目名称')).toHaveValue('测试黑色颗粒');
-  await page.getByRole('button',{name:'导出素材',exact:true}).click();
+  await page.getByRole('button',{name:'导出',exact:true}).click();
   const dialog=page.getByRole('dialog');
   await dialog.getByLabel('素材尺寸').selectOption('4096');
   await dialog.getByRole('button',{name:'下载素材'}).click();
@@ -139,8 +141,9 @@ test('2D interface saves and reopens, cancels 4K export and retries a transparen
 
 test('SVG imports keep originals, clean scripts/external references, and reject invalid project data', async ({page})=>{
   const svg='<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><script>window.hacked=true</script><image href="https://example.com/unsafe.png"/><rect width="32" height="64" fill="black"/></svg>';
-  await page.getByLabel('导入灰度源文件').setInputFiles({name:'灰度源.svg',mimeType:'image/svg+xml',buffer:Buffer.from(svg)});
-  await expect(page.getByRole('heading',{name:'灰度源.svg',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'上传元素',exact:true}).click();
+  await page.getByLabel('上传素材文件').setInputFiles({name:'灰度源.svg',mimeType:'image/svg+xml',buffer:Buffer.from(svg)});
+  await expect(page.getByRole('heading',{name:'灰度源',exact:true})).toBeVisible();
   const result=await page.evaluate(async ()=>{
     const {useMaterialStore}=await import('/src/features/material/store.ts');
     const {parseMaterial,isSeamless}=await import('/src/features/material/model.ts');
@@ -153,8 +156,7 @@ test('SVG imports keep originals, clean scripts/external references, and reject 
     return{original,rejected,external,seamless:isSeamless(p),hacked:!!window.hacked};
   });
   expect(result.original).toBe(svg);expect(result.rejected&&result.external&&result.seamless).toBe(true);expect(result.hacked).toBe(false);
-  await page.getByLabel('周期边缘融合',{exact:true}).uncheck();
-  await expect(page.getByText('原图边缘未融合 · 512 px 预览')).toBeVisible();
+  await expect(page.getByLabel('随机种子')).not.toBeVisible();
 });
 
 test('locks survive randomization and undo; paired export has grayscale and matching normal manifest',async({page})=>{
@@ -239,24 +241,24 @@ test('category and search find paper/marble/pop/light presets and soft glow down
   await page.getByLabel('搜索纹理预设').fill('宣纸');
   await expect(page.locator('.material-preset')).toHaveCount(1);
   await page.getByRole('button',{name:/11 宣纸/}).click();
-  await expect(page.getByLabel('纤维密度',{exact:true})).toBeVisible();
+  await expect(page.getByLabel('密度',{exact:true})).toBeVisible();
   await page.getByLabel('搜索纹理预设').fill('大理石');
   await expect(page.getByText('没有匹配的纹理',{exact:true})).toBeVisible();
   await page.getByLabel('纹理分类').selectOption('surface');
   await expect(page.locator('.material-preset')).toHaveCount(3);
   await page.getByRole('button',{name:/20 白大理石/}).click();
-  await expect(page.getByLabel('脉络宽度',{exact:true})).toBeVisible();
+  await expect(page.getByLabel('尺度',{exact:true})).toBeVisible();
   await page.getByLabel('搜索纹理预设').fill('');
   await page.getByLabel('纹理分类').selectOption('graphic');
   await page.getByRole('button',{name:/23 波普网点/}).click();
-  await expect(page.getByLabel('网点覆盖',{exact:true})).toBeVisible();
+  await expect(page.getByLabel('密度',{exact:true})).toBeVisible();
   await page.getByLabel('纹理分类').selectOption('light');
   await page.getByRole('button',{name:/28 柔光/}).click();
-  await expect(page.getByLabel('光晕柔和',{exact:true})).toBeVisible();
-  await page.getByLabel('背景方式',{exact:true}).selectOption('transparent');
-  await expect(page.getByLabel('透明纹理颜色')).toHaveValue('white');
+  await expect(page.getByLabel('柔和度',{exact:true})).not.toBeVisible();
+  await page.getByLabel('画布底色',{exact:true}).selectOption('transparent');
+  await expect(page.getByLabel('纹理颜色')).toHaveValue('white');
   await page.getByLabel('透明检查底色').selectOption('dark');
-  await page.getByRole('button',{name:'导出素材',exact:true}).click();
+  await page.getByRole('button',{name:'导出',exact:true}).click();
   const dialog=page.getByRole('dialog');await dialog.getByLabel('素材尺寸').selectOption('128');
   const downloaded=page.waitForEvent('download');await dialog.getByRole('button',{name:'下载素材'}).click();
   const file=await downloaded,data=readPng(await readFile((await file.path())!));
