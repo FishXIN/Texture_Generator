@@ -1,6 +1,6 @@
 {
   "name": "texture-generator",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "A local monochrome texture studio for seamless patterns, Multiply overlays, transparent PNGs and optional normal maps.",
   "author": "Texture Generator",

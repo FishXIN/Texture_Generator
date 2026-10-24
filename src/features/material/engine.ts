@@ -115,7 +115,7 @@ function spots(l: HeightLayer): Field {
     data[k] = hash(x, y, l.seed);
     data[k + 1] = hash(x, y, l.seed ^ 0x9e3779b9);
     data[k + 2] = 0.08 + hash(x, y, l.seed ^ 171) * (0.15 + l.detail * 0.3);
-    data[k + 3] = hash(x, y, l.seed ^ 293) < 0.25 + l.detail * 0.75 ? 1 : 0;
+    data[k + 3] = hash(x, y, l.seed ^ 293) < l.coverage ? 1 : 0;
   }
   return (u, v, o) => {
     const x = frac(u) * n, y = frac(v) * n, ix = Math.floor(x), iy = Math.floor(y);
@@ -126,11 +126,154 @@ function spots(l: HeightLayer): Field {
       const vx = x - cx - data[k], vy = y - cy - data[k + 1], rr = data[k + 2] ** 2;
       const t = (vx * vx + vy * vy) / rr;
       if (t >= 1) continue;
-      darkness += (1 - t) ** 3;
-      const d = 6 * (1 - t) ** 2 * n / rr;
+      const power = 1.6 + l.softness * 4;
+      darkness += (1 - t) ** power;
+      const d = 2 * power * (1 - t) ** (power - 1) * n / rr;
       du += vx * d; dv += vy * d;
     }
     o.h = Math.max(0, 1 - darkness); o.du = o.h > 0 ? du : 0; o.dv = o.h > 0 ? dv : 0;
+  };
+}
+function paper(l: HeightLayer): Field {
+  const n=l.scale, fibers=new Float64Array(n*n*8), base=noise(n,l.seed^527), micro=noise(n*4,l.seed^793), a=scratch(), b=scratch();
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    const k=(y*n+x)*8,angle=TAU*hash(x,y,l.seed^882);
+    fibers[k]=.2+.6*hash(x,y,l.seed);fibers[k+1]=.2+.6*hash(x,y,l.seed^189);
+    fibers[k+2]=Math.cos(angle);fibers[k+3]=Math.sin(angle);
+    fibers[k+4]=.18+.32*hash(x,y,l.seed^359);fibers[k+5]=.018+.052*l.softness;
+    fibers[k+6]=hash(x,y,l.seed^772)<l.coverage?1:0;fibers[k+7]=.45+.55*hash(x,y,l.seed^99);
+  }
+  return(u,v,o)=>{
+    const x=frac(u)*n,y=frac(v)*n,ix=Math.floor(x),iy=Math.floor(y);
+    let ink=0,du=0,dv=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const cx=ix+dx,cy=iy+dy,k=(mod(cy,n)*n+mod(cx,n))*8;if(!fibers[k+6])continue;
+      const vx=x-cx-fibers[k],vy=y-cy-fibers[k+1],cs=fibers[k+2],sn=fibers[k+3];
+      const along=vx*cs+vy*sn,across=-vx*sn+vy*cs,ll=fibers[k+4]**2,ww=fibers[k+5]**2;
+      const q=along*along/ll+across*across/ww;if(q>=1)continue;
+      const weight=fibers[k+7],s=1-q,d=-6*s*s*weight*n;
+      ink+=s*s*s*weight;du+=d*(along*cs/ll-across*sn/ww);dv+=d*(along*sn/ll+across*cs/ww);
+    }
+    base(u,v,a);micro(u,v,b);const dark=Math.exp(-ink);
+    o.h=.93+.1*(a.h-.5)+.12*l.detail*(b.h-.5)-.26*(1-dark);
+    o.du=.1*a.du+.12*l.detail*b.du-.26*dark*du;o.dv=.1*a.dv+.12*l.detail*b.dv-.26*dark*dv;
+  };
+}
+function creases(l: HeightLayer): Field {
+  const base=fractal(l),t=scratch(),width=.006+.08*l.softness;
+  const fields=[noise(3,l.seed^333),noise(3,l.seed^777),noise(3,l.seed^999)],r=scratch();
+  const vectors=[[1,0],[0,1],[1,-1]];
+  return(u,v,o)=>{
+    base(u,v,t);o.h=.86+.08*(t.h-.5);o.du=.08*t.du;o.dv=.08*t.dv;
+    for(let i=0;i<fields.length;i++){
+      fields[i](u,v,r);const[ax,ay]=vectors[i],distortion=1+l.detail*4;
+      const phase=TAU*(l.scale*(ax*u+ay*v)+(r.h-.5)*distortion),sn=Math.sin(phase),cs=Math.cos(phase);
+      const valley=Math.exp(-sn*sn/width),weight=i===2?.6:1;
+      const d=weight*(.025*cs+.055*valley*2*sn*cs/width);
+      o.h+=weight*(.025*sn-.055*valley);
+      o.du+=d*TAU*(l.scale*ax+r.du*distortion);o.dv+=d*TAU*(l.scale*ay+r.dv*distortion);
+    }
+  };
+}
+function marble(l: HeightLayer): Field {
+  const base=fractal({...l,scale:2,detail:.25+l.detail*.15,kind:'noise'}),t=scratch();
+  const ax=l.direction==='horizontal'?0:1,ay=l.direction==='vertical'?0:1;
+  const width=.003+.11*l.softness,distortion=1+l.detail*5,offset=TAU*hash(0,0,l.seed);
+  return(u,v,o)=>{
+    base(u,v,t);
+    const phase=TAU*(l.scale*(ax*u+ay*v)+(t.h-.5)*distortion)+offset;
+    const branch=TAU*((l.scale+2)*(ay*u-ax*v)+(t.h-.5)*distortion*1.5)+offset*.7;
+    const sn=Math.sin(phase),sb=Math.sin(branch),dark=Math.exp(-sn*sn/width),fine=Math.exp(-sb*sb/(width*.3));
+    const mask=t.h*t.h,d=.83*dark*2*sn*Math.cos(phase)/width;
+    const db=.16*mask*fine*2*sb*Math.cos(branch)/(width*.3),dm=-.32*t.h*fine;
+    o.h=.975+.04*(t.h-.5)-.83*dark-.16*mask*fine;
+    o.du=d*TAU*(l.scale*ax+t.du*distortion)+db*TAU*((l.scale+2)*ay+t.du*distortion*1.5)+(.04+dm)*t.du;
+    o.dv=d*TAU*(l.scale*ay+t.dv*distortion)+db*TAU*(-(l.scale+2)*ax+t.dv*distortion*1.5)+(.04+dm)*t.dv;
+  };
+}
+function halftone(l: HeightLayer): Field {
+  const n=l.scale,variation=noise(3,l.seed),radii=new Float64Array(n*n),t=scratch();
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    variation((x+.5)/n,(y+.5)/n,t);
+    radii[y*n+x]=(.06+.43*l.coverage)*(1-l.detail*.85+l.detail*1.7*t.h);
+  }
+  return(u,v,o)=>{
+    const x=frac(u)*n,y=frac(v)*n,ix=Math.floor(x),iy=Math.floor(y);
+    let ink=0,du=0,dv=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const cx=ix+dx,cy=iy+dy,r=radii[mod(cy,n)*n+mod(cx,n)],vx=x-cx-.5,vy=y-cy-.5;
+      const dist=Math.hypot(vx,vy),edge=.006+.22*l.softness,start=Math.max(.001,r-edge);
+      const raw=(dist-start)/(2*edge),t=Math.max(0,Math.min(1,raw));
+      ink+=1-t*t*(3-2*t);
+      const d=raw>0&&raw<1?3*t*(1-t)*n/(edge*Math.max(dist,1e-9)):0;
+      du+=d*vx;dv+=d*vy;
+    }
+    o.h=Math.max(0,1-ink);o.du=o.h>0?du:0;o.dv=o.h>0?dv:0;
+  };
+}
+function hatch(l: HeightLayer): Field {
+  const n=l.scale,variation=noise(3,l.seed),t=scratch(),width=.004+.24*l.coverage,power=1.4+3*l.softness;
+  const ax=l.direction==='horizontal'?0:1,ay=l.direction==='vertical'?0:1;
+  return(u,v,o)=>{
+    variation(u,v,t);
+    const a=TAU*n*(ax*u+ay*v),b=TAU*n*(ay*u-ax*v)+TAU*hash(0,0,l.seed);
+    const sa=Math.sin(a),sb=Math.sin(b),za=sa*sa/width,zb=sb*sb/width;
+    const x=Math.exp(-za*power),y=Math.exp(-zb*power),mix=l.detail*(.35+.65*t.h);
+    const da=-2*power*sa*Math.cos(a)*x/width,db=-2*power*sb*Math.cos(b)*y/width;
+    const ink=x+mix*y*(1-x);
+    o.h=1-ink;
+    o.du=-((1-mix*y)*da*TAU*n*ax+mix*(1-x)*db*TAU*n*ay+.65*l.detail*t.du*y*(1-x));
+    o.dv=-((1-mix*y)*da*TAU*n*ay-mix*(1-x)*db*TAU*n*ax+.65*l.detail*t.dv*y*(1-x));
+  };
+}
+function interference(l: HeightLayer): Field {
+  const n=l.scale,offset=TAU*hash(0,0,l.seed),ax=l.direction==='horizontal'?0:1,ay=l.direction==='vertical'?0:1;
+  return(u,v,o)=>{
+    const a=TAU*n*(ax*u+ay*v)+offset,b=TAU*(2+4*l.detail)*(.5*Math.cos(TAU*u)+.5*Math.cos(TAU*v))+offset*.7;
+    const sa=Math.sin(a),ca=Math.cos(a),cb=Math.cos(b),sb=Math.sin(b),mix=1-l.detail+l.detail*cb;
+    o.h=.5+.5*sa*mix;
+    o.du=.5*ca*mix*TAU*n*ax+.5*l.detail*sa*sb*TAU*(2+4*l.detail)*.5*TAU*Math.sin(TAU*u);
+    o.dv=.5*ca*mix*TAU*n*ay+.5*l.detail*sa*sb*TAU*(2+4*l.detail)*.5*TAU*Math.sin(TAU*v);
+  };
+}
+function contours(l: HeightLayer): Field {
+  const base=fractal({...l,kind:'noise',scale:4}),t=scratch(),width=.002+.2*l.coverage,power=1.2+2*l.softness;
+  return(u,v,o)=>{
+    base(u,v,t);const phase=TAU*l.scale*t.h,sn=Math.sin(phase),dark=Math.exp(-sn*sn*power/width);
+    const d=2*sn*Math.cos(phase)*dark*power/width*TAU*l.scale;
+    o.h=1-dark;o.du=d*t.du;o.dv=d*t.dv;
+  };
+}
+function lights(l: HeightLayer): Field {
+  const n=l.scale,data=new Float64Array(n*n*4),bokeh=l.kind==='bokeh';
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    const k=(y*n+x)*4;
+    data[k]=.1+.8*hash(x,y,l.seed);data[k+1]=.1+.8*hash(x,y,l.seed^839);
+    data[k+2]=(.09+.4*l.coverage)*(.7+.6*hash(x,y,l.seed^137));data[k+3]=.4+.6*hash(x,y,l.seed^372);
+  }
+  return(u,v,o)=>{
+    const x=frac(u)*n,y=frac(v)*n,ix=Math.floor(x),iy=Math.floor(y);let sum=0,du=0,dv=0;
+    for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+      const cx=ix+dx,cy=iy+dy,k=(mod(cy,n)*n+mod(cx,n))*4,vx=x-cx-data[k],vy=y-cy-data[k+1];
+      const r=data[k+2],q=(vx*vx+vy*vy)/(r*r),amp=data[k+3];
+      if(bokeh){
+        const edge=.03+.7*l.softness,raw=(q-(1-edge))/(2*edge),t=Math.max(0,Math.min(1,raw));
+        const core=1-t*t*(3-2*t),dc=raw>0&&raw<1?-3*t*(1-t)/edge:0;
+        const ring=Math.exp(-(((q-.8)/(.06+.3*l.softness))**2)),dr=-2*(q-.8)/(.06+.3*l.softness)**2*ring;
+        const value=.5*core+l.detail*.5*ring,derivative=.5*dc+l.detail*.5*dr;
+        sum+=value*amp;du+=derivative*amp*2*vx*n/(r*r);dv+=derivative*amp*2*vy*n/(r*r);
+      }else{
+        // Compact support at three radii makes the period exact, including its gradient.
+        const support=9;if(q>=support)continue;
+        const spread=.35+1.4*l.softness,taper=(1-q/support)**3;
+        const g=Math.exp(-q/spread),halo=Math.exp(-q/(spread*2.5));
+        const value=(g+l.detail*.35*halo)*taper;
+        const derivative=(-g/spread-l.detail*.35*halo/(spread*2.5))*taper
+          -(g+l.detail*.35*halo)*3*(1-q/support)**2/support;
+        sum+=value*amp;du+=derivative*amp*2*vx*n/(r*r);dv+=derivative*amp*2*vy*n/(r*r);
+      }
+    }
+    const gain=Math.exp(-sum*1.6);o.h=1-gain;o.du=1.6*gain*du;o.dv=1.6*gain*dv;
   };
 }
 function imageField(source: DecodedSource, seamless: boolean): Field {
@@ -165,6 +308,14 @@ function layerField(l: HeightLayer, sources: DecodedSource[]): Field {
   } else if (l.kind === 'noise' || l.kind === 'ridged') base = fractal(l);
   else if (l.kind === 'cells' || l.kind === 'cracks') base = cellular(l);
   else if (l.kind === 'spots') base = spots(l);
+  else if (l.kind === 'paper') base = paper(l);
+  else if (l.kind === 'creases') base = creases(l);
+  else if (l.kind === 'marble') base = marble(l);
+  else if (l.kind === 'halftone') base = halftone(l);
+  else if (l.kind === 'hatch') base = hatch(l);
+  else if (l.kind === 'interference') base = interference(l);
+  else if (l.kind === 'contours') base = contours(l);
+  else if (l.kind === 'glow' || l.kind === 'bokeh') base = lights(l);
   else base = directional(l);
   const wa = noise(3, l.seed ^ 31337), wb = noise(3, l.seed ^ 71391), a = scratch(), b = scratch();
   return (u, v, o) => {

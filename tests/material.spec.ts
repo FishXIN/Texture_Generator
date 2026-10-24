@@ -20,7 +20,9 @@ test('periodic fields and their gradients remain continuous with warp, direction
       for (let i = 0; i < 18; i++) {
         const u = (i * 0.173 + 0.137) % 1, v = (i * 0.217 + 0.319) % 1, a = at(u,v), b = at(u+1,v-1);
         for (const k of ['h','du','dv']) period = Math.max(period, Math.abs(a[k] - b[k]));
-        const e = 1e-6, du = (at(u+e,v).h - at(u-e,v).h)/(2*e), dv = (at(u,v+e).h - at(u,v-e).h)/(2*e);
+        // Use a smaller step near clipped black/white so the stencil remains on the same smooth branch.
+        const edge = Math.min(a.h,1-a.h), e = Math.max(1e-9,Math.min(1e-6,edge/(4*(1+Math.abs(a.du)+Math.abs(a.dv)))));
+        const du = (at(u+e,v).h - at(u-e,v).h)/(2*e), dv = (at(u,v+e).h - at(u,v-e).h)/(2*e);
         gradient = Math.max(gradient, Math.abs(a.du-du)/(1+Math.abs(du)), Math.abs(a.dv-dv)/(1+Math.abs(dv)));
       }
       for (const t of [0.123,0.418,0.893]) for (const [a,b] of [[at(0,t),at(1,t)],[at(t,0),at(t,1)]]) {
@@ -43,7 +45,7 @@ test('periodic fields and their gradients remain continuous with warp, direction
     }
     return {period,gradient,count:samples.length};
   });
-  expect(result.count).toBe(30); expect(result.period).toBeLessThan(1e-8); expect(result.gradient).toBeLessThan(.002);
+  expect(result.count).toBe(93); expect(result.period).toBeLessThan(1e-8); expect(result.gradient).toBeLessThan(.002);
 });
 
 test('seed reproduction, resolution independence and normal conventions preserve grayscale', async ({ page }) => {
@@ -179,4 +181,84 @@ test('locks survive randomization and undo; paired export has grayscale and matc
   for(const[name,data]of files)if(name.endsWith('.png'))readPng(data);
   const manifest=JSON.parse(files.get('manifest.json')!.toString());
   expect(manifest.seamless).toBe(true);expect(manifest.texture.bitDepth).toBe(16);expect(manifest.normal.convention).toBe('OpenGL');
+});
+
+test('new preset families produce distinct seeded images and their dedicated controls change the field',async({page})=>{
+  const result=await page.evaluate(async()=>{
+    const {newMaterial,materialPresets,heightLayer,parseMaterial}=await import('/src/features/material/model.ts');
+    const {renderMaterial}=await import('/src/features/material/engine.ts');
+    const signatures=new Set<string>(),failures:string[]=[];
+    for(const entry of materialPresets){
+      const p=newMaterial(entry.id),maps=renderMaterial(p,64),restored=renderMaterial(parseMaterial(JSON.stringify(p)),64);
+      let sum=0,squares=0,min=1,max=0;
+      for(let i=0;i<maps.height.length;i++){
+        const h=maps.height[i];sum+=h;squares+=h*h;min=Math.min(min,h);max=Math.max(max,h);
+        if(!Number.isFinite(h)||h!==restored.height[i])failures.push(entry.id);
+      }
+      if(max-min<.01)failures.push(`${entry.id}:constant`);
+      signatures.add(`${sum.toFixed(6)}:${squares.toFixed(6)}`);
+    }
+    const controls=[
+      ['paper','coverage'],['paper','softness'],['marble','detail'],['marble','softness'],
+      ['halftone','coverage'],['halftone','softness'],['hatch','detail'],['contours','coverage'],
+      ['glow','coverage'],['glow','softness'],['bokeh','detail'],['interference','detail'],
+    ];
+    for(const[kind,param]of controls){
+      const p=newMaterial();p.layers=[heightLayer(kind,{contrast:1,warp:0,scale:8,[param]:.1})];
+      const a=renderMaterial(p,64);p.layers[0][param]=.85;const b=renderMaterial(p,64);
+      if(!a.height.some((h:number,i:number)=>Math.abs(h-b.height[i])>.005))failures.push(`${kind}:${param}`);
+    }
+    const old=newMaterial('grain');delete old.layers[0].coverage;delete old.layers[0].softness;delete old.export.pigment;
+    const migrated=parseMaterial(JSON.stringify(old));
+    const invalid=structuredClone(migrated);invalid.layers[0].softness=NaN;
+    let rejected=false;try{parseMaterial(JSON.stringify(invalid));}catch{rejected=true;}
+    return{count:materialPresets.length,distinct:signatures.size,failures:failures.slice(0,10),migration:[migrated.layers[0].coverage,migrated.layers[0].softness,migrated.export.pigment],rejected};
+  });
+  expect(result.count).toBe(31);expect(result.distinct).toBe(31);expect(result.failures).toEqual([]);
+  expect(result.migration).toEqual([.55,.35,'black']);expect(result.rejected).toBe(true);
+});
+
+test('white transparent light retains straight white channels and 8/16-bit alpha',async({page})=>{
+  const result=await page.evaluate(async()=>{
+    const{newMaterial}=await import('/src/features/material/model.ts');const{renderMaterial}=await import('/src/features/material/engine.ts');
+    const{encodePng}=await import('/src/features/material/png.ts');
+    const maps=renderMaterial(newMaterial('soft-glow'),64);
+    return{values:[...maps.height],eight:[...await encodePng(maps,'height',8,true,'white')],sixteen:[...await encodePng(maps,'height',16,true,'white')]};
+  });
+  const eight=readPng(result.eight),sixteen=readPng(result.sixteen);let bad=0;
+  expect([eight.color,eight.depth,sixteen.color,sixteen.depth]).toEqual([4,8,4,16]);
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){
+    if(eight.raw[y*129+1+x*2]!==255||eight.raw[y*129+2+x*2]!==Math.round(result.values[y*64+x]*255)
+      ||sixteen.raw.readUInt16BE(y*257+1+x*4)!==65535||sixteen.raw.readUInt16BE(y*257+3+x*4)!==Math.round(result.values[y*64+x]*65535))bad++;
+  }
+  expect(bad).toBe(0);
+});
+
+test('category and search find paper/marble/pop/light presets and soft glow downloads as white alpha',async({page})=>{
+  await page.getByLabel('纹理分类').selectOption('paper');
+  await page.getByLabel('搜索纹理预设').fill('宣纸');
+  await expect(page.locator('.material-preset')).toHaveCount(1);
+  await page.getByRole('button',{name:/11 宣纸/}).click();
+  await expect(page.getByLabel('纤维密度',{exact:true})).toBeVisible();
+  await page.getByLabel('搜索纹理预设').fill('大理石');
+  await expect(page.getByText('没有匹配的纹理',{exact:true})).toBeVisible();
+  await page.getByLabel('纹理分类').selectOption('surface');
+  await expect(page.locator('.material-preset')).toHaveCount(3);
+  await page.getByRole('button',{name:/20 白大理石/}).click();
+  await expect(page.getByLabel('脉络宽度',{exact:true})).toBeVisible();
+  await page.getByLabel('搜索纹理预设').fill('');
+  await page.getByLabel('纹理分类').selectOption('graphic');
+  await page.getByRole('button',{name:/23 波普网点/}).click();
+  await expect(page.getByLabel('网点覆盖',{exact:true})).toBeVisible();
+  await page.getByLabel('纹理分类').selectOption('light');
+  await page.getByRole('button',{name:/28 柔光/}).click();
+  await expect(page.getByLabel('光晕柔和',{exact:true})).toBeVisible();
+  await page.getByLabel('背景方式',{exact:true}).selectOption('transparent');
+  await expect(page.getByLabel('透明纹理颜色')).toHaveValue('white');
+  await page.getByLabel('透明检查底色').selectOption('dark');
+  await page.getByRole('button',{name:'导出素材',exact:true}).click();
+  const dialog=page.getByRole('dialog');await dialog.getByLabel('素材尺寸').selectOption('128');
+  const downloaded=page.waitForEvent('download');await dialog.getByRole('button',{name:'下载素材'}).click();
+  const file=await downloaded,data=readPng(await readFile((await file.path())!));
+  expect(file.suggestedFilename()).toContain('White_Alpha');expect(data.color).toBe(4);
 });

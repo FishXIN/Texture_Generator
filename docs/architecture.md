@@ -1,6 +1,6 @@
 # 架构与目录约定
 
-本文对应 0.3.0。默认入口为黑白纹理素材工作台；既有图形 / 动态入口为 `?studio=pattern`。两种项目模型独立，原有底图阵列保留在图形工作台内。
+本文对应 0.4.0。默认入口为黑白纹理素材工作台；既有图形 / 动态入口为 `?studio=pattern`。两种项目模型独立，原有底图阵列保留在图形工作台内。
 
 ## 模块职责
 
@@ -38,7 +38,9 @@ flowchart LR
 
 引擎按归一化 UV 采样。整数周期 value noise、quintic 插值、周期 feature points、整数方向波向量和周期 domain warp 保持四边连续。所有图层运算也变换解析梯度，因此法线对应最终灰度。预览和不同导出尺寸在同一 UV 得到相同值。
 
-预览与正式导出使用独立 Worker；更新参数或取消终止对应 Worker，返回的旧任务不会覆盖新图。Worker 内完成 PNG 编码和 ZIP 打包。灰度 PNG 为 type 0；透明黑色为 type 4，gray=0、alpha=1−height；法线 type 2。16 位从浮点场大端写入，zlib 与 CRC32 遵循 PNG 格式，不经过 Canvas 降至 8 位。
+预览与正式导出使用独立 Worker；更新参数或取消终止对应 Worker，返回的旧任务不会覆盖新图。Worker 内完成 PNG 编码和 ZIP 打包。灰度 PNG 为 type 0；透明黑白为 type 4，黑色 gray=0、alpha=1−height，白色 gray=1、alpha=height；法线 type 2。16 位从浮点场大端写入，zlib 与 CRC32 遵循 PNG 格式，不经过 Canvas 降至 8 位。
+
+`generatorControls` 统一定义每种生成器的参数标签与可用项；31 个预设附分类元数据。旧项目缺少 coverage / softness / pigment 时由解析器补全，原有颗粒密度按旧 detail 公式恢复，不改变种子。纸张纤维、高斯光晕采用紧支撑保证周期边缘，脉络 / 网点 / 排线 / 等高线 / 干涉也返回梯度。
 
 法线默认关闭。OpenGL / DirectX 仅绿色通道相反，强度不改变灰度。二维 Canvas 是 8 位预览；棋盘格等背景只由 CSS 提供。没有 WebGL 或 Three.js 依赖。细节和文件边界见 [material-studio.md](material-studio.md)。
 

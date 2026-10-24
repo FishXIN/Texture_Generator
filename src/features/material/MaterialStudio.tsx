@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Grid2X2, ChevronDown, ChevronUp, Copy, Download, Eye, EyeOff, FolderOpen, Layers, LockKeyhole, Plus, Redo2, Save, Shuffle, Trash2, Undo2, UnlockKeyhole, Upload } from 'lucide-react';
 import { Field, SelectField, Toggle } from '@/shared/ui/StudioFields';
 import { saveBlob } from '@/features/project/io';
-import { generators, heightLayer, isSeamless, materialId, materialPresets, newMaterial, parseMaterial } from './model';
+import { generators, generatorControls, presetGroups, heightLayer, isSeamless, materialId, materialPresets, newMaterial, parseMaterial } from './model';
 import type { Generator, HeightLayer } from './model';
 import { useMaterialStore } from './store';
 import { materialTask } from './workerClient';
@@ -19,10 +19,14 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
   const [maps, setMaps] = useState<MaterialMaps | null>(null), [busy, setBusy] = useState(false), [generationError, setGenerationError] = useState('');
   const [mode, setMode] = useState<'height' | 'normal'>('height'), [tiled, setTiled] = useState(false), [boundaries, setBoundaries] = useState(false);
   const [checkBackground, setCheckBackground] = useState('checker');
+  const [category, setCategory] = useState<keyof typeof presetGroups>('all'), [search, setSearch] = useState('');
   const [exportOpen, setExportOpen] = useState(false), [saving, setSaving] = useState(false), [importing, setImporting] = useState(false), [recovery, setRecovery] = useState(false);
   const openInput = useRef<HTMLInputElement>(null), sourceInput = useRef<HTMLInputElement>(null);
   const renderKey = JSON.stringify({ layers: p.layers.map(({ locked, name, ...l }) => l), sources: p.sources, normal: p.normal });
   const previews = useMemo(() => materialPresets.map(entry => renderMaterial(newMaterial(entry.id), 64)), []);
+  const filteredPresets = materialPresets.map((entry,i)=>({entry,preview:previews[i]})).filter(({entry})=>
+    (category==='all'||entry.group===category)&&`${entry.name}${entry.subtitle}`.includes(search.trim()));
+  const controls = layer ? generatorControls[layer.kind] : null;
   useEffect(() => { if (p.export.maps === 'height') setMode('height'); }, [p.export.maps]);
   useEffect(() => {
     let active = true;
@@ -119,11 +123,13 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
     </header>
     <div className="material-workspace">
       <aside className="material-library">
-        <div className="material-panel-heading"><span>程序化预设</span><span>{materialPresets.length}</span></div>
-        <div className="material-presets">{materialPresets.map((entry, i) =>
+        <div className="material-panel-heading"><span>程序化预设</span><span>{filteredPresets.length} / {materialPresets.length}</span></div>
+        <div className="material-preset-filter"><select aria-label="纹理分类" value={category} onChange={e=>setCategory(e.target.value as keyof typeof presetGroups)}>{Object.entries(presetGroups).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select>
+          <input aria-label="搜索纹理预设" placeholder="搜索纹理…" value={search} onChange={e=>setSearch(e.target.value)}/></div>
+        <div className="material-presets">{filteredPresets.map(({entry,preview}) =>
           <button key={entry.id} className="material-preset" onClick={() => { s.replace(newMaterial(entry.id)); s.message(`已载入${entry.name.slice(3)}，可撤销回上一作品`); }}>
-            <MapView maps={previews[i]} label={`${entry.name}预设缩略图`}/><span><b>{entry.name}</b><small>{entry.subtitle}</small></span>
-          </button>)}</div>
+            <MapView maps={preview} label={`${entry.name}预设缩略图`}/><span><b>{entry.name}</b><small>{entry.subtitle}</small></span>
+          </button>)}{filteredPresets.length===0&&<p className="material-no-presets">没有匹配的纹理</p>}</div>
         <div className="material-layer-heading"><span><Layers size={14}/>纹理图层</span><button aria-label="添加纹理图层" onClick={s.addLayer}><Plus size={16}/></button></div>
         <div className="material-layer-list">{[...p.layers].reverse().map(l =>
           <div key={l.id} className={`material-layer ${s.selected === l.id ? 'selected' : ''}`}>
@@ -150,14 +156,14 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
         {recovery && <div className="material-recovery"><span>有上次编辑的恢复副本</span><button onClick={() => { try { s.replace(parseMaterial(localStorage.getItem('texture-material-recovery')!)); s.message('已恢复上次纹理'); } catch (e) { s.message(e instanceof Error ? e.message : '恢复失败'); } setRecovery(false); }}>恢复</button><button onClick={() => setRecovery(false)}>忽略</button></div>}
         <div className="material-stage">
           <div className="material-stage-meta"><span>{mode === 'height' ? 'TEXTURE / GRAYSCALE' : `NORMAL / ${p.normal.convention.toUpperCase()}`}</span><span>{isSeamless(p) ? '周期无缝' : '原图边缘未融合'} · 512 px 预览</span></div>
-          <div className={`material-flat ${mode === 'height' && p.export.background === 'transparent' ? `material-check-${checkBackground}` : ''}`}><MapView maps={maps} normal={mode === 'normal'} transparent={p.export.background === 'transparent'} repeat={tiled ? 3 : 1} boundaries={boundaries} label={mode === 'normal' ? '法线贴图预览' : '黑白纹理预览'}/></div>
+          <div className={`material-flat ${mode === 'height' && p.export.background === 'transparent' ? `material-check-${checkBackground}` : ''}`}><MapView maps={maps} normal={mode === 'normal'} transparent={p.export.background === 'transparent'} pigment={p.export.pigment} repeat={tiled ? 3 : 1} boundaries={boundaries} label={mode === 'normal' ? '法线贴图预览' : '黑白纹理预览'}/></div>
           {generationError ? <div className="material-generation-error" role="alert">{generationError}</div> : busy && <span className="material-updating">更新预览…</span>}
-          <div className="material-stage-caption">{tiled ? '检查单元边缘与重复节奏' : '固定种子 · 可重复生成'}<span>{mode === 'normal' ? '切线空间方向数据' : p.export.background === 'transparent' ? '黑色纹理 · 透明叠加' : '黑白素材 · 适用于正片叠底'}</span></div>
+          <div className="material-stage-caption">{tiled ? '检查单元边缘与重复节奏' : '固定种子 · 可重复生成'}<span>{mode === 'normal' ? '切线空间方向数据' : p.export.background === 'transparent' ? `${p.export.pigment==='white'?'白色柔光':'黑色纹理'} · 透明叠加` : p.export.pigment==='white' ? '黑白柔光 · 适用于滤色' : '黑白素材 · 适用于正片叠底'}</span></div>
         </div>
         <div className="material-map-strip">
           <button onClick={() => setMode('height')} className={mode === 'height' ? 'selected' : ''}><MapView maps={maps} label="纹理缩略图"/><span><b>黑白纹理</b><small>TEXTURE · {p.export.depth} BIT</small><p>平面叠加 / 灰度蒙版 / 高度</p></span></button>
           {p.export.maps !== 'height' ? <button onClick={() => setMode('normal')} className={mode === 'normal' ? 'selected' : ''}><MapView maps={maps} normal label="法线图缩略图"/><span><b>切线空间法线</b><small>NORMAL · {p.normal.convention === 'opengl' ? 'OPENGL +Y' : 'DIRECTX −Y'}</small><p>蓝紫色编码表面方向</p></span></button>
-            : <div className="material-usage"><b>{p.export.background === 'transparent' ? '透明底叠加' : '正片叠底使用'}</b><p>{p.export.background === 'transparent' ? '黑色纹理直接叠加到作品上。' : '导入设计软件，图层混合选择正片叠底。'}<br/>白色区域保留底图，黑色区域增加纹理。</p></div>}
+            : <div className="material-usage"><b>{p.export.background === 'transparent' ? '透明底叠加' : p.export.pigment==='white' ? '柔光叠加使用' : '正片叠底使用'}</b><p>{p.export.background === 'transparent' ? `${p.export.pigment==='white'?'白色柔光':'黑色纹理'}直接叠加到作品上。` : p.export.pigment==='white' ? '导入设计软件，可选择滤色或柔光混合。' : '导入设计软件，图层混合选择正片叠底。'}<br/>{p.export.pigment==='white' ? '透明白色版适合在深色作品上增加光晕。' : '白色区域保留底图，黑色区域增加纹理。'}</p></div>}
         </div>
         <footer className="material-status"><span role="status">{s.notice}</span><span>{busy ? '正在更新' : '全部在本机处理'}</span></footer>
       </main>
@@ -169,11 +175,13 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
             {Object.entries(generators).filter(([k]) => k !== 'image' || !!layer.sourceId).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
           </SelectField>
           {layer.kind !== 'image' && <>
-            <Field label="纹理尺度" value={layer.scale} min={1} max={64} disabled={layer.locked} onChange={v => update({ scale: v }, 'scale')}/>
-            {(layer.kind === 'noise' || layer.kind === 'ridged') && <Field label="细节层级" value={layer.octaves} min={1} max={6} disabled={layer.locked} onChange={v => update({ octaves: v }, 'octaves')}/>}
-            {['noise','ridged','cracks','spots','fibers'].includes(layer.kind) && <Field label="细节量" value={layer.detail} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ detail: v }, 'detail')}/>}
+            <Field label={controls!.scale} value={layer.scale} min={1} max={64} disabled={layer.locked} onChange={v => update({ scale: v }, 'scale')}/>
+            {controls?.octaves && <Field label="细节层级" value={layer.octaves} min={1} max={6} disabled={layer.locked} onChange={v => update({ octaves: v }, 'octaves')}/>}
+            {controls?.detail && <Field label={controls.detail} value={layer.detail} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ detail: v }, 'detail')}/>}
+            {controls?.coverage && <Field label={controls.coverage} value={layer.coverage} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v=>update({coverage:v},'coverage')}/>}
+            {controls?.softness && <Field label={controls.softness} value={layer.softness} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v=>update({softness:v},'softness')}/>}
             <Field label="空间扰动" value={layer.warp} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ warp: v }, 'warp')}/>
-            {(layer.kind === 'fibers' || layer.kind === 'waves') && <SelectField label="纹路方向" value={layer.direction} disabled={layer.locked} onChange={v => update({ direction: v as HeightLayer['direction'] })}><option value="horizontal">横向</option><option value="vertical">纵向</option><option value="diagonal">斜向</option></SelectField>}
+            {controls?.direction && <SelectField label="纹路方向" value={layer.direction} disabled={layer.locked} onChange={v => update({ direction: v as HeightLayer['direction'] })}><option value="horizontal">横向</option><option value="vertical">纵向</option><option value="diagonal">斜向</option></SelectField>}
           </>}
           {layer.kind === 'image' && <><Toggle label="周期边缘融合" checked={layer.tileSource} disabled={layer.locked} onChange={v => update({ tileSource: v })}/><p className="material-help">融合会改变原图；关闭后不保证无缝。透明区域按中灰读取。</p></>}
           <Field label="黑白对比" value={layer.contrast} min={0} max={4} step={0.01} disabled={layer.locked} onChange={v => update({ contrast: v }, 'contrast')}/>
@@ -185,9 +193,10 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
           <Field label="图层权重" value={layer.opacity} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ opacity: v }, 'opacity')}/>
         </section> : <section><p className="material-help">选择预设或添加纹理图层开始制作。</p></section>}
         <section><h2>素材输出</h2>
-          <SelectField label="背景方式" value={p.export.background} onChange={v => s.edit(p => { p.export.background = v as typeof p.export.background; })}><option value="white">黑白 · 正片叠底</option><option value="transparent">透明底 · 黑色纹理</option></SelectField>
+          <SelectField label="背景方式" value={p.export.background} onChange={v => s.edit(p => { p.export.background = v as typeof p.export.background; })}><option value="white">不透明黑白</option><option value="transparent">透明底叠加</option></SelectField>
+          {p.export.background==='transparent'&&<SelectField label="透明纹理颜色" value={p.export.pigment} onChange={v=>s.edit(p=>{p.export.pigment=v as 'black'|'white';})}><option value="black">黑色 · 加深纹理</option><option value="white">白色 · 增加柔光</option></SelectField>}
           <Toggle label="启用法线输出" checked={p.export.maps !== 'height'} onChange={v => s.edit(p => { p.export.maps = v ? 'both' : 'height'; })}/>
-          <p className="material-help">黑白图可用于平面设计、蒙版或高度。透明版将白色转为透明。</p>
+          <p className="material-help">黑白图可用于平面设计、蒙版或高度。透明版可保留黑色纹理或白色光晕。</p>
         </section>
         {p.export.maps !== 'height' && <section><h2>法线贴图</h2>
           <Field label="法线强度" value={p.normal.strength} min={0} max={2} step={0.01} onChange={v => s.edit(p => { p.normal.strength = v; }, 'normal')}/>

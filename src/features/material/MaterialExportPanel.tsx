@@ -52,7 +52,8 @@ export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
           {[128,256,512,1024,2048,4096].map(v => <option key={v} value={v}>{v} × {v}</option>)}
         </SelectField>
         {p.export.maps !== 'normal' && <>
-          <SelectField label="背景方式" value={p.export.background} disabled={busy} onChange={v => s.edit(p => { p.export.background = v as typeof p.export.background; })}><option value="white">黑白 · 正片叠底</option><option value="transparent">透明底 · 黑色纹理</option></SelectField>
+          <SelectField label="背景方式" value={p.export.background} disabled={busy} onChange={v => s.edit(p => { p.export.background = v as typeof p.export.background; })}><option value="white">不透明黑白</option><option value="transparent">透明底叠加</option></SelectField>
+          {p.export.background==='transparent'&&<SelectField label="透明纹理颜色" value={p.export.pigment} disabled={busy} onChange={v=>s.edit(p=>{p.export.pigment=v as 'black'|'white';})}><option value="black">黑色 · 加深纹理</option><option value="white">白色 · 增加柔光</option></SelectField>}
           <SelectField label="灰度位深" value={String(p.export.depth)} disabled={busy} onChange={v => s.edit(p => { p.export.depth = Number(v) as 8 | 16; })}>
             <option value="8">8 位 · 平面素材 / 蒙版</option><option value="16">16 位 · 精细灰度 / 高度</option>
           </SelectField>
@@ -62,9 +63,9 @@ export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
         <span>空间平铺<b>{isSeamless(p) ? '周期连续' : '有未融合的导入源'}</b></span>
         <span>透明通道<b>{p.export.maps === 'normal' ? '法线不透明' : p.export.background === 'transparent' ? '保留 Alpha' : '不透明黑白'}</b></span>
         <span>灰度位深<b>{p.export.maps === 'normal' ? 'RGB 8 位' : `${p.export.depth} 位`}</b></span>
-        <span>{p.export.maps === 'height' ? '叠加方式' : '法线约定'}<b>{p.export.maps === 'height' ? p.export.background === 'transparent' ? '普通叠加' : '正片叠底' : p.normal.convention === 'opengl' ? 'OpenGL · +Y' : 'DirectX · −Y'}</b></span>
+        <span>{p.export.maps === 'height' ? '叠加方式' : '法线约定'}<b>{p.export.maps === 'height' ? p.export.background === 'transparent' ? '普通叠加' : p.export.pigment==='white' ? '滤色 / 柔光' : '正片叠底' : p.normal.convention === 'opengl' ? 'OpenGL · +Y' : 'DirectX · −Y'}</b></span>
       </div>
-      <p className="material-help">{p.export.maps === 'normal' ? '法线蓝紫色表示方向，按非颜色数据导入，并选择对应的 OpenGL / DirectX 约定。' : p.export.background === 'transparent' ? '透明版为纯黑纹理，白色转为透明；直接叠加到作品上，预览棋盘格不会写入文件。' : '黑白图导入平面设计软件后，选择正片叠底；白色保留底图，黑色增加纹理。也可作为灰度蒙版或高度使用。'}{p.export.maps === 'both' && ' ZIP 包含法线与参数说明。'}</p>
+      <p className="material-help">{p.export.maps === 'normal' ? '法线蓝紫色表示方向，按非颜色数据导入，并选择对应的 OpenGL / DirectX 约定。' : p.export.background === 'transparent' ? p.export.pigment==='white' ? '透明版为白色纹理，灰度越亮越不透明；可用于光晕叠加，背景不会写入文件。' : '透明版为纯黑纹理，白色转为透明；直接叠加到作品上，预览棋盘格不会写入文件。' : p.export.pigment==='white' ? '柔光类黑白图可选择滤色增加亮度，或选择柔光混合调整明暗。导出白色透明版可直接叠加光晕。' : '黑白图导入平面设计软件后，选择正片叠底；白色保留底图，黑色增加纹理。也可作为灰度蒙版或高度使用。'}{p.export.maps === 'both' && ' ZIP 包含法线与参数说明。'}</p>
       {p.sources.length > 0 && <p className="material-help">导入源解码上限 1024 px，放大导出不会恢复原图细节。</p>}
       {busy && <div className="material-progress"><progress value={progress} max={1}/><span>{Math.round(progress * 100)}% · {progress < 0.8 ? '生成完整分辨率' : '编码 PNG'}</span></div>}
       <p role="status" className="material-export-message">{error}</p>

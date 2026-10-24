@@ -7,7 +7,7 @@ function chunk(type: string, data: Uint8Array) {
   view.setUint32(8 + data.length, crc32(bytes.subarray(4, 8 + data.length)));
   return bytes;
 }
-export async function encodePng(maps: MaterialMaps, channel: 'height' | 'normal', depth: 8 | 16 = 16, transparent = false): Promise<Uint8Array> {
+export async function encodePng(maps: MaterialMaps, channel: 'height' | 'normal', depth: 8 | 16 = 16, transparent = false, pigment: 'black' | 'white' = 'black'): Promise<Uint8Array> {
   const size = maps.size, height = channel === 'height', alpha = height && transparent, bits = height ? depth : 8;
   const stride = size * (height ? bits / 8 * (alpha ? 2 : 1) : 3);
   const raw = new Uint8Array((stride + 1) * size);
@@ -18,8 +18,9 @@ export async function encodePng(maps: MaterialMaps, channel: 'height' | 'normal'
       if (height) {
         const value = Math.round(Math.max(0, Math.min(1, maps.height[k])) * (bits === 16 ? 65535 : 255));
         if (alpha) {
-          raw[offset++] = 0; if (bits === 16) raw[offset++] = 0;
-          const opacity = (bits === 16 ? 65535 : 255) - value;
+          const color = pigment === 'white' ? 255 : 0;
+          raw[offset++] = color; if (bits === 16) raw[offset++] = color;
+          const opacity = pigment === 'white' ? value : (bits === 16 ? 65535 : 255) - value;
           if (bits === 16) raw[offset++] = opacity >>> 8;
           raw[offset++] = opacity & 255;
         } else {

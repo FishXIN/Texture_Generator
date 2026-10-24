@@ -4,15 +4,17 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 
 [中文](README.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
 
-**Main contains the 0.3.0 source. Existing release installers retain their older capabilities; check the attached version.**
+**Main contains the 0.4.0 source. Existing release installers retain their older capabilities; check the attached version.**
 
 ![Monochrome texture studio](docs/images/texture-studio.png)
 
 ## Monochrome textures
 
-- Ten editable presets: paper grain, speckles, grunge, stone, concrete, cracks, cells, fibers, woven patterns and waves.
+- 31 editable presets, grouped and searchable: papers, natural surfaces, pop/optical patterns and soft light.
+- Xuan, mulberry, cotton, watercolor, laid, recycled, kraft, aged and crumpled paper; white/black marble and ink marbling.
+- Halftone dots, variable dots, comic hatching, spectral interference and contours; glow, bokeh, mist and satin patterns.
 - Periodic noise, ridged noise, cellular patterns and smooth seeded dots with shared height/gradient calculations.
-- Layer visibility, locks, duplication, ordering, blending, contrast, brightness, inversion, detail and domain warp.
+- Layer visibility, locks, duplication, ordering, blending, contrast, brightness, inversion and domain warp, with dedicated fiber density, vein width, dot coverage, edge softness and light-radius controls.
 - Unit and 3 × 3 tiled preview; checkerboard, light and dark backgrounds for transparent output.
 - Local PNG / JPEG / WebP / SVG grayscale sources, original-source retention and optional periodic edge blending.
 - Project save/reopen, undo/redo and local recovery.
@@ -22,10 +24,15 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 | --- | --- |
 | Grayscale PNG, 8 / 16 bit | Multiply overlay in a design app, grayscale mask or non-color height data |
 | Black transparent PNG, 8 / 16 bit | Black pigment with alpha = 1 − grayscale; ordinary compositing |
+| White transparent PNG, 8 / 16 bit | White pigment with alpha = grayscale; light overlays |
 | Optional normal PNG, RGB 8 bit | Tangent-space directions, OpenGL +Y or DirectX −Y; import as non-color data |
 | Paired ZIP | Texture, normal and an output manifest |
 
-The default is an 8-bit grayscale PNG with normal output disabled. Export sizes are 128–4096 px; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. Preview backgrounds and tile guides are excluded.
+The default is an 8-bit grayscale PNG with normal output disabled. Export sizes are 128–4096 px; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
+
+![Additional texture families](docs/images/texture-families.png)
+
+Paper and stone presets are procedural style simulations, not physical scans.
 
 Limits: eight layers, four imported sources, 5 MB per source and 25 MB per project. Imported sources decode at up to 1024 px on the longest edge; enlarging cannot recover detail. Transparent source areas use middle gray. Periodic blending changes the input; disabling it removes the seamless guarantee. High-detail 4K rendering can take longer. Periodicity does not eliminate perceptible repetition.
 
@@ -87,7 +94,7 @@ npm test
 npm run dist:mac                  # On Windows: npm run dist:win
 ```
 
-Sixteen Playwright scenarios cover periodic values and gradients, true 16-bit PNG and alpha data, normal conventions, reproducibility and the existing graphics/motion workflow.
+Nineteen Playwright scenarios cover all preset fields/gradients, dedicated controls, old-project defaults, true 16-bit PNG and black/white alpha data, normal conventions, reproducibility and the existing graphics/motion workflow.
 
 Project architecture: `src/app` routes the workspaces; `features/material` owns monochrome fields, Worker generation, PNG encoding and the 2D editor; `project`, `assets`, `texture` and `export` retain the graphics/motion workflow. See [architecture](docs/architecture.md) and [contributing](CONTRIBUTING.md).
 

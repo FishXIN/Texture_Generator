@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### 0.4.0 Texture families
+
+- Expanded from 10 to 31 presets with paper, marble, pop/optical and soft-light families, category filtering and search.
+- Added periodic pulp fibers, creases, marble veins, halftone dots, crosshatching, spectral interference, contours, glow and bokeh fields with matching analytic gradients.
+- Added dedicated density, coverage, softness, vein and light controls; particle density is separate from opacity/weight.
+- Added white transparent light overlays with true 8/16-bit alpha, alongside black transparent textures. Output descriptions distinguish Multiply, Screen and Soft Light use.
+- Added old-project defaults for the new controls and pigment choice.
+- Added three browser scenarios for every preset's reproducibility/distinctness, control effectiveness, backward compatibility, white PNG data and category/search/light export. All 19 scenarios pass.
+
 ### 0.3.0 Monochrome textures
 
 - Added a 2D monochrome texture workspace with ten editable presets, periodic continuous fields, seeded speckles, layer blending and tiled/transparent inspection.
