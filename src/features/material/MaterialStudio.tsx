@@ -12,6 +12,9 @@ import type { MaterialMaps } from './engine';
 import { MapView } from './TexturePreview';
 import { MaterialExportPanel } from './MaterialExportPanel';
 import { materialFilename } from './export';
+import { MaterialLayerTools } from './MaterialLayerTools';
+import { createParticles } from './particles';
+import { frac, torusDistance } from './algorithms';
 import './material.css';
 
 export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string) => void }) {
@@ -21,9 +24,11 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
   const [checkBackground, setCheckBackground] = useState('checker');
   const [category, setCategory] = useState<keyof typeof presetGroups>('all'), [search, setSearch] = useState('');
   const [exportOpen, setExportOpen] = useState(false), [saving, setSaving] = useState(false), [importing, setImporting] = useState(false), [recovery, setRecovery] = useState(false);
+  const [importTarget,setImportTarget]=useState<'layer'|'reference'>('layer');
+  const [playing,setPlaying]=useState(false),playClock=useRef(0),phaseDisplay=useRef<HTMLInputElement>(null),drag=useRef<{id:string;dx:number;dy:number}|null>(null);
   const openInput = useRef<HTMLInputElement>(null), sourceInput = useRef<HTMLInputElement>(null);
   const renderKey = JSON.stringify({ layers: p.layers.map(({ locked, name, ...l }) => l), sources: p.sources, normal: p.normal });
-  const previews = useMemo(() => materialPresets.map(entry => renderMaterial(newMaterial(entry.id), 64)), []);
+  const previews = useMemo(() => materialPresets.map(entry => renderMaterial(newMaterial(entry.id), 48)), []);
   const filteredPresets = materialPresets.map((entry,i)=>({entry,preview:previews[i]})).filter(({entry})=>
     (category==='all'||entry.group===category)&&`${entry.name}${entry.subtitle}`.includes(search.trim()));
   const controls = layer ? generatorControls[layer.kind] : null;
@@ -33,13 +38,20 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
     let task: ReturnType<typeof materialTask<MaterialMaps>> | undefined;
     setBusy(true); setGenerationError('');
     const timer = setTimeout(() => {
-      task = materialTask<MaterialMaps>(useMaterialStore.getState().project, 512);
-      task.promise.then(m => { if (active) { setMaps(m); setBusy(false); } }).catch(e => {
-        if (active) { setBusy(false); setGenerationError(e.message); s.message(e.message); }
-      });
+      const draw=()=>{
+        if(!active)return;
+        const current=useMaterialStore.getState().project;
+        const phase=playing?frac((performance.now()-playClock.current)/1000/current.timeline.duration):current.timeline.phase;
+        if(phaseDisplay.current)phaseDisplay.current.value=String(phase);
+        task = materialTask<MaterialMaps>(current, playing?192:512,false,undefined,{phase});
+        task.promise.then(m => {
+          if(active){setMaps(m);setBusy(false);if(playing)requestAnimationFrame(draw);}
+        }).catch(e=>{if(active){setBusy(false);setGenerationError(e.message);s.message(e.message);}});
+      };
+      draw();
     }, 100);
     return () => { active = false; clearTimeout(timer); task?.cancel(); };
-  }, [renderKey]);
+  }, [renderKey,playing,p.timeline.phase,p.timeline.duration,p.timeline.fps]);
   useEffect(() => {
     try { setRecovery(!!localStorage.getItem('texture-material-recovery')); } catch {}
     if (window.electron?.platform === 'darwin') document.documentElement.dataset.desktop = 'mac';
@@ -81,15 +93,16 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
   };
   const importFile = async (file?: File) => {
     if (!file || importing) return;
-    if (p.sources.length >= 4 || p.layers.length >= 8) { s.message('最多 4 个导入源、8 个高度层'); return; }
+    if (p.sources.length >= 4 || (importTarget==='layer'&&p.layers.length >= 8)) { s.message('最多 4 个导入源、8 个高度层'); return; }
     setImporting(true);
     try {
       const { source, warnings } = await importHeight(file);
       const l = heightLayer('image', { name: source.name, sourceId: source.id, contrast: 1, warp: 0 });
       const current = useMaterialStore.getState().project;
-      if (current.sources.length >= 4 || current.layers.length >= 8) throw new Error('导入源或图层已达到数量上限');
+      if (current.sources.length >= 4 || (importTarget==='layer'&&current.layers.length >= 8)) throw new Error('导入源或图层已达到数量上限');
       if (JSON.stringify(current).length + source.original.length > 24_000_000) throw new Error('导入后项目超过 25 MB');
-      s.edit(p => { p.sources.push(source); p.layers.push(l); }); s.select(l.id); s.message(warnings.join('；') || '已导入灰度源');
+      s.edit(p => { p.sources.push(source); if(importTarget==='layer')p.layers.push(l);else{const selected=p.layers.find(v=>v.id===s.selected);if(selected&&!selected.locked){selected.sourceId=source.id;if(selected.kind==='particles')selected.shape='custom';}} });
+      if(importTarget==='layer')s.select(l.id); s.message(warnings.join('；') || '已导入灰度源');
     } catch (e) { s.message(e instanceof Error ? e.message : '导入失败'); }
     finally { setImporting(false); if (sourceInput.current) sourceInput.current.value = ''; }
   };
@@ -102,7 +115,7 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
     if (l.locked) return;
     s.edit(p => {
       p.layers = p.layers.filter(v => v.id !== l.id);
-      p.sources = p.sources.filter(source => p.layers.some(v => v.sourceId === source.id));
+      p.sources = p.sources.filter(source => p.layers.some(v => v.sourceId === source.id||v.sourceMix.some(m=>m.id===source.id)||v.objects.some(o=>o.sourceId===source.id)));
     });
     s.select(useMaterialStore.getState().project.layers.at(-1)?.id ?? '');
   };
@@ -140,9 +153,15 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
         {layer && <div className="material-layer-actions">
           <button aria-label="上移图层" disabled={layer.locked || p.layers.at(-1)?.id === layer.id} onClick={() => moveLayer(layer.id, 1)}><ChevronUp size={14}/></button>
           <button aria-label="下移图层" disabled={layer.locked || p.layers[0]?.id === layer.id} onClick={() => moveLayer(layer.id, -1)}><ChevronDown size={14}/></button>
-          <button aria-label="复制纹理图层" disabled={layer.locked || p.layers.length >= 8} onClick={() => { const l = { ...layer, id: materialId(), name: `${layer.name} 副本` }; s.edit(p => { p.layers.push(l); }); s.select(l.id); }}><Copy size={14}/></button>
+          <button aria-label="复制纹理图层" disabled={layer.locked || p.layers.length >= 8} onClick={() => {
+            const l = structuredClone(layer); l.id=materialId(); l.name=`${layer.name} 副本`;
+            const seeds=new Map(createParticles(layer,0).map(o=>[o.id,o.outlineSeed]));
+            l.objects=l.objects.map(o=>({...o,id:materialId(),outlineSeed:o.outlineSeed??seeds.get(o.id)}));
+            s.edit(p => { p.layers.push(l); }); s.select(l.id);
+          }}><Copy size={14}/></button>
           <button aria-label="删除纹理图层" disabled={layer.locked} onClick={() => removeLayer(layer)}><Trash2 size={14}/></button>
         </div>}
+        <div className="material-import-target"><select aria-label="导入用途" value={importTarget} onChange={e=>setImportTarget(e.target.value as typeof importTarget)}><option value="layer">新增灰度图层</option><option value="reference">当前图层输入 / 印模</option></select></div>
         <button className="material-import" disabled={importing} onClick={() => sourceInput.current?.click()}><Upload size={14}/>{importing ? '正在读取素材' : '导入灰度源'}<span>PNG / SVG</span></button>
         <a className="material-pattern-link" href="?studio=pattern">打开图形与动态工作台 ↗</a>
       </aside>
@@ -155,10 +174,33 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
         </div>
         {recovery && <div className="material-recovery"><span>有上次编辑的恢复副本</span><button onClick={() => { try { s.replace(parseMaterial(localStorage.getItem('texture-material-recovery')!)); s.message('已恢复上次纹理'); } catch (e) { s.message(e instanceof Error ? e.message : '恢复失败'); } setRecovery(false); }}>恢复</button><button onClick={() => setRecovery(false)}>忽略</button></div>}
         <div className="material-stage">
-          <div className="material-stage-meta"><span>{mode === 'height' ? 'TEXTURE / GRAYSCALE' : `NORMAL / ${p.normal.convention.toUpperCase()}`}</span><span>{isSeamless(p) ? '周期无缝' : '原图边缘未融合'} · 512 px 预览</span></div>
-          <div className={`material-flat ${mode === 'height' && p.export.background === 'transparent' ? `material-check-${checkBackground}` : ''}`}><MapView maps={maps} normal={mode === 'normal'} transparent={p.export.background === 'transparent'} pigment={p.export.pigment} repeat={tiled ? 3 : 1} boundaries={boundaries} label={mode === 'normal' ? '法线贴图预览' : '黑白纹理预览'}/></div>
+          <div className="material-stage-meta"><span>{mode === 'height' ? 'TEXTURE / GRAYSCALE' : `NORMAL / ${p.normal.convention.toUpperCase()}`}</span><span>{isSeamless(p) ? '周期无缝' : '原图边缘未融合'} · {playing?192:512} px 预览</span></div>
+          <div className={`material-flat ${mode === 'height' && p.export.background === 'transparent' ? `material-check-${checkBackground}` : ''}`}
+            onPointerDown={e=>{
+              if(!layer||layer.locked||layer.distribution!=='manual'||playing||tiled||layer.motion!=='none')return;
+              const canvas=e.currentTarget.querySelector('canvas')!,rect=canvas.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,y=(e.clientY-rect.top)/rect.height;
+              if(x<0||x>1||y<0||y>1)return;
+              const item=createParticles(layer,0).reverse().find(o=>!o.locked&&torusDistance({x,y},o)<o.radius);
+              if(item){drag.current={id:item.id,dx:frac(x-item.x+.5)-.5,dy:frac(y-item.y+.5)-.5};e.currentTarget.setPointerCapture(e.pointerId);}
+            }}
+            onPointerMove={e=>{
+              if(!drag.current||!layer||layer.locked)return;
+              const rect=e.currentTarget.querySelector('canvas')!.getBoundingClientRect(),x=frac((e.clientX-rect.left)/rect.width-drag.current.dx),y=frac((e.clientY-rect.top)/rect.height-drag.current.dy);
+              const id=drag.current.id;s.edit(p=>{const o=p.layers.find(l=>l.id===layer.id)?.objects.find(o=>o.id===id);if(o&&!o.locked){o.x=x;o.y=y;}},`${id}:drag`);
+            }} onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}>
+            <MapView maps={maps} normal={mode === 'normal'} transparent={p.export.background === 'transparent'} pigment={p.export.pigment} repeat={tiled ? 3 : 1} boundaries={boundaries} label={mode === 'normal' ? '法线贴图预览' : '黑白纹理预览'}/></div>
           {generationError ? <div className="material-generation-error" role="alert">{generationError}</div> : busy && <span className="material-updating">更新预览…</span>}
           <div className="material-stage-caption">{tiled ? '检查单元边缘与重复节奏' : '固定种子 · 可重复生成'}<span>{mode === 'normal' ? '切线空间方向数据' : p.export.background === 'transparent' ? `${p.export.pigment==='white'?'白色柔光':'黑色纹理'} · 透明叠加` : p.export.pigment==='white' ? '黑白柔光 · 适用于滤色' : '黑白素材 · 适用于正片叠底'}</span></div>
+        </div>
+        <div className="material-timeline">
+          <button aria-label={playing?'暂停纹理':'播放纹理'} onClick={()=>{
+            if(!playing)playClock.current=performance.now()-p.timeline.phase*p.timeline.duration*1000;
+            else s.edit(p=>{p.timeline.phase=frac((performance.now()-playClock.current)/1000/p.timeline.duration);},'phase');
+            setPlaying(v=>!v);
+          }}>{playing?'暂停':'播放'}</button>
+          <input ref={phaseDisplay} aria-label="时间相位" type="range" min={0} max={.9999} step={.0001} defaultValue={p.timeline.phase} disabled={playing} onChange={e=>s.edit(p=>{p.timeline.phase=Number(e.target.value);},'phase')}/>
+          <label>时长<input aria-label="循环时长" type="number" min={.25} max={30} step={.25} value={p.timeline.duration} disabled={playing} onChange={e=>{const v=Number(e.target.value);if(v>=.25&&v<=30)s.edit(p=>{p.timeline.duration=v;},'duration');}}/>秒</label>
+          <label>FPS<input aria-label="序列帧率" type="number" min={1} max={60} value={p.timeline.fps} onChange={e=>{const v=Number(e.target.value);if(Number.isInteger(v)&&v>=1&&v<=60)s.edit(p=>{p.timeline.fps=v;},'fps');}}/></label>
         </div>
         <div className="material-map-strip">
           <button onClick={() => setMode('height')} className={mode === 'height' ? 'selected' : ''}><MapView maps={maps} label="纹理缩略图"/><span><b>黑白纹理</b><small>TEXTURE · {p.export.depth} BIT</small><p>平面叠加 / 灰度蒙版 / 高度</p></span></button>
@@ -174,16 +216,17 @@ export function MaterialStudio({ onOpenPattern }: { onOpenPattern: (text: string
           <SelectField label="生成方式" value={layer.kind} disabled={layer.locked} onChange={v => update({ kind: v as Generator })}>
             {Object.entries(generators).filter(([k]) => k !== 'image' || !!layer.sourceId).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
           </SelectField>
-          {layer.kind !== 'image' && <>
+          {layer.kind !== 'image'&&!['particles','spray','dust','sand'].includes(layer.kind) && <>
             <Field label={controls!.scale} value={layer.scale} min={1} max={64} disabled={layer.locked} onChange={v => update({ scale: v }, 'scale')}/>
             {controls?.octaves && <Field label="细节层级" value={layer.octaves} min={1} max={6} disabled={layer.locked} onChange={v => update({ octaves: v }, 'octaves')}/>}
-            {controls?.detail && <Field label={controls.detail} value={layer.detail} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ detail: v }, 'detail')}/>}
+            {controls?.detail && (layer.kind!=='algorithm'||['gaussian','salt','poisson'].includes(layer.algorithm)) && <Field label={controls.detail} value={layer.detail} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ detail: v }, 'detail')}/>}
             {controls?.coverage && <Field label={controls.coverage} value={layer.coverage} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v=>update({coverage:v},'coverage')}/>}
             {controls?.softness && <Field label={controls.softness} value={layer.softness} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v=>update({softness:v},'softness')}/>}
             <Field label="空间扰动" value={layer.warp} min={0} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ warp: v }, 'warp')}/>
             {controls?.direction && <SelectField label="纹路方向" value={layer.direction} disabled={layer.locked} onChange={v => update({ direction: v as HeightLayer['direction'] })}><option value="horizontal">横向</option><option value="vertical">纵向</option><option value="diagonal">斜向</option></SelectField>}
           </>}
           {layer.kind === 'image' && <><Toggle label="周期边缘融合" checked={layer.tileSource} disabled={layer.locked} onChange={v => update({ tileSource: v })}/><p className="material-help">融合会改变原图；关闭后不保证无缝。透明区域按中灰读取。</p></>}
+          <MaterialLayerTools layer={layer}/>
           <Field label="黑白对比" value={layer.contrast} min={0} max={4} step={0.01} disabled={layer.locked} onChange={v => update({ contrast: v }, 'contrast')}/>
           <Field label="明暗偏移" value={layer.bias} min={-1} max={1} step={0.01} disabled={layer.locked} onChange={v => update({ bias: v }, 'bias')}/>
           <Toggle label="反转黑白" checked={layer.invert} disabled={layer.locked} onChange={v => update({ invert: v })}/>

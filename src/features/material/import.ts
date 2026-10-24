@@ -2,6 +2,7 @@ import { sanitizeSvg } from '@/features/assets/svg';
 import { materialId } from './model';
 import type { HeightSource } from './model';
 import type { DecodedSource } from './engine';
+import type { Point } from './algorithms';
 
 const cache = new Map<string, Promise<DecodedSource>>();
 export async function decodeSource(source: HeightSource): Promise<DecodedSource> {
@@ -14,16 +15,17 @@ export async function decodeSource(source: HeightSource): Promise<DecodedSource>
     try {
       const image = new Image(); image.src = url; await image.decode();
       if (image.naturalWidth < 1 || image.naturalHeight < 1 || image.naturalWidth > 8192 || image.naturalHeight > 8192) throw new Error('图像尺寸需在 1–8192 像素范围内');
-      const ratio = Math.min(1, 1024 / Math.max(image.naturalWidth, image.naturalHeight));
+      const ratio = source.mime==='image/svg+xml'?1024/Math.max(image.naturalWidth,image.naturalHeight):Math.min(1, 1024 / Math.max(image.naturalWidth, image.naturalHeight));
       const width = Math.max(1, Math.round(image.naturalWidth * ratio)), height = Math.max(1, Math.round(image.naturalHeight * ratio));
       const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d')!; ctx.drawImage(image, 0, 0, width, height);
-      const data = ctx.getImageData(0, 0, width, height).data, pixels = new Float32Array(width * height);
+      const data = ctx.getImageData(0, 0, width, height).data, pixels = new Float32Array(width * height), gray=new Float32Array(width*height), alphaChannel=new Float32Array(width*height);
       for (let i = 0; i < pixels.length; i++) {
         const alpha = data[i * 4 + 3] / 255;
-        pixels[i] = ((data[i * 4] * 0.2126 + data[i * 4 + 1] * 0.7152 + data[i * 4 + 2] * 0.0722) / 255) * alpha + 0.5 * (1 - alpha);
+        gray[i]=(data[i * 4] * 0.2126 + data[i * 4 + 1] * 0.7152 + data[i * 4 + 2] * 0.0722)/255;
+        alphaChannel[i]=alpha;pixels[i]=gray[i]*alpha+.5*(1-alpha);
       }
-      return { id: source.id, width, height, pixels };
+      return { id: source.id, width, height, pixels, gray, alpha:alphaChannel };
     } finally { URL.revokeObjectURL(url); }
   })();
   cache.set(key, work);
@@ -44,6 +46,24 @@ export async function importHeight(file: File): Promise<{ source: HeightSource; 
   }
   const source: HeightSource = { id: materialId(), name: file.name.slice(0, 200), mime, original, width: 1, height: 1 };
   const decoded = await decodeSource(source); source.width = decoded.width; source.height = decoded.height;
-  warnings.push('导入源按灰度读取，透明区域使用中灰；解码上限 1024 px。边缘融合会调整原图。');
+  warnings.push('原图、独立灰度和 Alpha 均保留；高度层透明区域按中灰读取。图形/印刷层使用原 Alpha；解码上限 1024 px。');
   return { source, warnings };
+}
+export function sampleSvgPath(source:HeightSource):Point[] {
+  if(source.mime!=='image/svg+xml')throw new Error('请选择 SVG 轮廓素材');
+  const asset=sanitizeSvg(source.original,source.name),host=document.createElement('div');
+  host.style.cssText='position:fixed;left:-100000px;top:0;visibility:hidden;pointer-events:none';
+  host.innerHTML=asset.svg;document.body.append(host);
+  try{
+    const root=host.querySelector('svg')!,items=[...root.querySelectorAll<SVGGeometryElement>('path,polyline,polygon,line,rect,circle,ellipse')];
+    let longest:SVGGeometryElement|undefined,length=0;
+    for(const item of items){try{const n=item.getTotalLength();if(n>length){length=n;longest=item;}}catch{}}
+    if(!longest||length<=0)throw new Error('SVG 中没有可读取的轮廓');
+    const box=root.viewBox.baseVal,matrix=root.getCTM()!.inverse().multiply(longest.getCTM()!);
+    const count=Math.min(128,Math.max(16,Math.round(length/4)));
+    return Array.from({length:count},(_,i)=>{
+      const point=longest!.getPointAtLength(length*i/(count-1)),at=new DOMPoint(point.x,point.y).matrixTransform(matrix);
+      return{x:Math.max(0,Math.min(1,(at.x-box.x)/box.width)),y:Math.max(0,Math.min(1,(at.y-box.y)/box.height))};
+    });
+  }finally{host.remove();}
 }

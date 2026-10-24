@@ -1,14 +1,55 @@
+import { algorithms } from './algorithms';
+import type { Algorithm, Point } from './algorithms';
+import { additionalPresets } from './presets';
+
+export const particleShapes = {
+  circle:'圆点', ellipse:'椭圆', blob:'有机斑点', square:'方块', polygon:'多边形', line:'短线',
+  star:'星形', ring:'空心圆环', debris:'碎屑', splatter:'飞溅', leaf:'叶片', flower:'花朵', symbol:'符号', custom:'导入 SVG',
+} as const;
+export const distributions = {
+  random:'随机', grid:'网格', stagger:'错位', cluster:'聚集', spaced:'最小间距', blue:'蓝噪均匀',
+  gradient:'渐变', radial:'放射', path:'沿路径', mirror:'镜像', kaleidoscope:'万花筒', manual:'手工编排',
+} as const;
+export const motions = {
+  none:'静止', drift:'整体漂移', wander:'随机游动', flow:'旋度流场', wave:'波浪', vortex:'涡旋',
+  turbulence:'湍流', breathe:'呼吸', flicker:'闪烁', grow:'生长消散', morph:'形状变形',
+  parallax:'分层视差', refresh:'雪花刷新', evolve:'循环演化',
+} as const;
+export type Motion = keyof typeof motions;
+export type ParticleShape = keyof typeof particleShapes;
+export type Distribution = keyof typeof distributions;
+export type ManualObject = {
+  id:string; x:number; y:number; size:number; angle:number; aspect:number; gray:number; opacity:number;
+  shape:ParticleShape; sourceId:string; flipX:boolean; flipY:boolean; locked:boolean; motionLocked:boolean;
+  outlineSeed?:number;
+};
+const extendedGenerators = {
+  particles:'图形颗粒', algorithm:'基础噪声', film:'胶片颗粒', dust:'胶片灰尘', scratches:'曲线划痕',
+  oldphoto:'老照片', copier:'复印墨粉', pulp:'纸浆团块', stains:'纸面污点',
+  smoke:'卷曲烟气', turbulence:'湍流云纹', wood:'年轮木纹', terrain:'地形起伏', water:'叠加水波', flame:'火焰轮廓',
+  spray:'喷漆', airbrush:'喷枪柔雾', bleed:'墨水渗化', drybrush:'干刷', pencil:'铅笔',
+  charcoal:'炭笔', chalk:'粉笔', crayon:'蜡笔', screen:'丝网漏印', stamp:'印章斑驳', wear:'油墨磨损',
+  sand:'沙粒', plaster:'石膏', stucco:'灰泥抹痕', rust:'锈蚀', frosted:'磨砂', brushed:'拉丝',
+  peeling:'漆面剥落', snow:'黑白雪花', pixel:'像素颗粒', blocks:'像素块', scan:'扫描线',
+  bands:'条带', glitch:'故障碎片', compression:'压缩失真风格', signal:'信号干扰',
+  halftoneSquare:'方形网点', halftoneEllipse:'椭圆网点', halftoneLine:'线状半调',
+  ditherRandom:'随机抖动', ditherOrdered:'有序抖动',
+} as const;
 export const generators = {
   noise: '多尺度噪声', ridged: '岩石脊线', cells: '细胞表面', cracks: '裂纹',
   fibers: '方向纤维', woven: '编织', waves: '波纹', spots: '随机斑点', image: '导入灰度',
   paper: '纸浆纤维', creases: '纸张褶皱', marble: '大理石脉络', halftone: '半调网点',
   hatch: '交叉排线', interference: '波谱干涉', contours: '等高线',
-  glow: '柔光光斑', bokeh: '散焦光斑',
+  glow: '柔光光斑', bokeh: '散焦光斑', ...extendedGenerators,
 } as const;
 export type Generator = keyof typeof generators;
-export const presetGroups = { all: '全部', paper: '纸张', surface: '自然表面', graphic: '波普 / 波谱', light: '柔光' } as const;
+export const presetGroups = {
+  all:'全部', grain:'基础颗粒', fragments:'点与碎片', film:'胶片', paper:'纸张', nature:'自然连续',
+  paint:'绘画印刷', surface:'材质表面', digital:'数字故障', graphic:'网点 / 波谱', pattern:'图形', light:'柔光',
+} as const;
 export type PresetGroup = Exclude<keyof typeof presetGroups, 'all'>;
 export const generatorControls: Record<Generator, { scale: string; detail?: string; coverage?: string; softness?: string; direction?: boolean; octaves?: boolean }> = {
+  ...Object.fromEntries(Object.keys(extendedGenerators).map(k=>[k,{scale:'纹理尺度',detail:'细节量',coverage:'覆盖范围',softness:'边缘柔和',direction:true}])) as Record<keyof typeof extendedGenerators,{scale:string;detail:string;coverage:string;softness:string;direction:boolean}>,
   noise: { scale:'纹理尺度', detail:'细节量', octaves:true },
   ridged: { scale:'纹理尺度', detail:'细节量', octaves:true },
   cells: { scale:'细胞数量' }, cracks: { scale:'裂块数量', detail:'裂缝宽度' },
@@ -25,6 +66,42 @@ export const generatorControls: Record<Generator, { scale: string; detail?: stri
   contours: { scale:'等高线密度', detail:'轮廓细节', coverage:'线条宽度', softness:'线条柔和', octaves:true },
   glow: { scale:'光斑数量', detail:'光晕层次', coverage:'光斑范围', softness:'光晕柔和' },
   bokeh: { scale:'散焦数量', detail:'光环强度', coverage:'光斑大小', softness:'散焦柔和' },
+  algorithm:{scale:'采样密度',detail:'分布参数'},
+  film:{scale:'胶片粒径',coverage:'颗粒强度'},oldphoto:{scale:'胶片粒径',coverage:'老化强度'},
+  scratches:{scale:'划痕数量',coverage:'划痕宽度',direction:true},
+  copier:{scale:'墨粉细度',detail:'着墨阈值'},
+  pulp:{scale:'纸浆尺度'},stains:{scale:'污点尺度',coverage:'污点强度'},
+  smoke:{scale:'烟带密度',detail:'卷曲幅度',coverage:'烟气强度',softness:'烟带柔和',direction:true},
+  turbulence:{scale:'扰动尺度',detail:'卷曲幅度',softness:'细带柔和',direction:true},
+  wood:{scale:'年轮密度',detail:'年轮扰动',softness:'纹路宽度'},
+  terrain:{scale:'地形尺度',detail:'地形分层',coverage:'分层数量'},
+  water:{scale:'叠波密度',detail:'波形扰动'},
+  flame:{scale:'火焰密度',detail:'卷曲幅度',coverage:'火焰强度',softness:'火焰柔和',direction:true},
+  airbrush:{scale:'喷雾微粒',coverage:'喷雾强度',softness:'喷雾范围'},
+  bleed:{scale:'渗边尺度',coverage:'扩散范围'},
+  drybrush:{scale:'笔触密度',detail:'笔触弯曲',coverage:'着墨覆盖',direction:true},
+  pencil:{scale:'笔触密度',detail:'笔触弯曲',coverage:'着墨覆盖',direction:true},
+  charcoal:{scale:'笔触密度',detail:'笔触弯曲',coverage:'着墨覆盖',direction:true},
+  chalk:{scale:'笔触密度',detail:'笔触弯曲',coverage:'着墨覆盖',direction:true},
+  crayon:{scale:'笔触密度',detail:'笔触弯曲',coverage:'着墨覆盖',direction:true},
+  screen:{scale:'网印密度',detail:'缺损细节',coverage:'漏印强度'},
+  stamp:{scale:'缺损密度',detail:'缺损边界',coverage:'磨损强度'},
+  wear:{scale:'缺损密度',detail:'缺损边界',coverage:'磨损强度'},
+  plaster:{scale:'细孔尺度'},stucco:{scale:'抹痕密度',detail:'抹痕起伏',direction:true},
+  rust:{scale:'锈斑密度',coverage:'锈蚀覆盖'},
+  frosted:{scale:'微粒密度'},brushed:{scale:'拉丝密度',coverage:'拉丝宽度',direction:true},
+  peeling:{scale:'剥落尺度',coverage:'剥落覆盖',softness:'剥落边缘'},
+  snow:{scale:'雪花密度'},pixel:{scale:'像素密度',coverage:'像素覆盖'},
+  blocks:{scale:'块面密度',coverage:'细块比例'},
+  scan:{scale:'扫描密度',coverage:'干扰强度'},
+  bands:{scale:'条带密度',coverage:'条带强度',direction:true},
+  glitch:{scale:'切片密度',detail:'错位幅度',coverage:'错位覆盖'},
+  compression:{scale:'压缩块密度',detail:'量化等级',coverage:'失真强度'},
+  signal:{scale:'干扰密度',detail:'错位幅度',coverage:'干扰强度'},
+  halftoneSquare:{scale:'网点密度',coverage:'网点覆盖',softness:'网点柔和'},
+  halftoneEllipse:{scale:'网点密度',coverage:'网点覆盖',softness:'网点柔和'},
+  halftoneLine:{scale:'线网密度',coverage:'线网覆盖',softness:'线网柔和'},
+  ditherRandom:{scale:'抖动密度'},ditherOrdered:{scale:'抖动密度'},
 };
 export type HeightLayer = {
   id: string; name: string; visible: boolean; locked: boolean; kind: Generator;
@@ -33,12 +110,19 @@ export type HeightLayer = {
   contrast: number; bias: number; invert: boolean; opacity: number;
   coverage: number; softness: number;
   blend: 'replace' | 'add' | 'multiply' | 'max'; sourceId: string; tileSource: boolean;
+  algorithm:Algorithm; transform:'fbm'|'turbulence'|'ridged'; response:'all'|'dark'|'edge'|'alpha';
+  shape:ParticleShape; distribution:Distribution; count:number; sizeMin:number; sizeMax:number;
+  aspect:number; angleMin:number; angleMax:number; grayMin:number; grayMax:number; baseGray:number;
+  alphaMin:number; alphaMax:number; spacing:number; centerX:number; centerY:number; sectors:number;
+  path:Point[]; objects:ManualObject[]; sourceMix:{id:string;weight:number}[];
+  motion:Motion; amplitude:number; cycles:number; motionDirection:number; motionLocked:boolean;
 };
 export type HeightSource = { id: string; name: string; original: string; mime: string; width: number; height: number };
 export type MaterialProject = {
   kind: 'surface-material'; version: 1; name: string; layers: HeightLayer[]; sources: HeightSource[];
   normal: { strength: number; convention: 'opengl' | 'directx' };
   export: { size: number; depth: 8 | 16; maps: 'both' | 'height' | 'normal'; background: 'white' | 'transparent'; pigment: 'black' | 'white' };
+  timeline:{duration:number;fps:number;phase:number};
 };
 export const materialId = () => crypto.randomUUID();
 export const copyMaterial = (p: MaterialProject) => structuredClone(p);
@@ -47,7 +131,12 @@ export const heightLayer = (kind: Generator = 'noise', patch: Partial<HeightLaye
   seed: 74291, scale: 6, octaves: 4, detail: 0.52, warp: 0.25,
   direction: 'horizontal', contrast: 1.35, bias: 0, invert: false, opacity: 1,
   coverage: 0.55, softness: 0.35,
-  blend: 'replace', sourceId: '', tileSource: true, ...patch,
+  blend: 'replace', sourceId: '', tileSource: true,
+  algorithm:'value',transform:'fbm',response:'all',shape:'circle',distribution:'random',
+  count:400,sizeMin:.004,sizeMax:.012,aspect:1,angleMin:0,angleMax:360,grayMin:0,grayMax:0,
+  alphaMin:1,alphaMax:1,baseGray:1,spacing:.015,centerX:.5,centerY:.5,sectors:6,
+  path:[{x:.1,y:.5},{x:.3,y:.2},{x:.6,y:.8},{x:.9,y:.5}],objects:[],sourceMix:[],
+  motion:'none',amplitude:.12,cycles:1,motionDirection:0,motionLocked:false,...patch,
 });
 export const materialPresets = [
   { id: 'paper', group:'paper', name: '01 纸张颗粒', subtitle: '浅色底 · 柔和纸感', layers: () => [
@@ -147,16 +236,17 @@ export const materialPresets = [
     heightLayer('fibers',{name:'丝绸细纹',scale:28,detail:.6,contrast:.55,warp:.2,direction:'diagonal'}),
     heightLayer('noise',{name:'柔和起伏',scale:3,octaves:3,contrast:.6,opacity:.45,blend:'add',seed:688}),
   ] },
+  ...additionalPresets(),
 ] as const;
 export function newMaterial(preset: string = 'paper'): MaterialProject {
   const entry = materialPresets.find(p => p.id === preset) ?? materialPresets[0];
   return {
-    kind: 'surface-material', version: 1, name: `${entry.name.slice(3)}纹理`,
-    layers: entry.layers(), sources: [], normal: { strength: 0.65, convention: 'opengl' },
+    kind: 'surface-material', version: 1, name: `${entry.name.replace(/^\d+\s*/,'')}纹理`,
+    layers: entry.layers(), sources: [], normal: { strength: 0.65, convention: 'opengl' },timeline:{duration:3,fps:24,phase:0},
     export: { size: 2048, depth: 8, maps: 'height', background: 'white', pigment:entry.group === 'light' ? 'white' : 'black' },
   };
 }
-export const isSeamless = (p: MaterialProject) => p.layers.filter(l => l.visible && l.opacity > 0).every(l => l.kind !== 'image' || l.tileSource);
+export const isSeamless = (p: MaterialProject) => p.layers.filter(l => l.visible && l.opacity > 0).every(l => !l.sourceId || l.kind==='particles' || l.tileSource);
 export function parseMaterial(text: string): MaterialProject {
   if (text.length > 25_000_000) throw new Error('项目超过 25 MB。');
   const p = JSON.parse(text) as MaterialProject;
@@ -190,8 +280,30 @@ export function parseMaterial(text: string): MaterialProject {
     num(l.detail, 0, 1); num(l.warp, 0, 1); num(l.contrast, 0, 4); num(l.bias, -1, 1); num(l.opacity, 0, 1);
     choice(l.direction, ['horizontal', 'vertical', 'diagonal']); choice(l.blend, ['replace', 'add', 'multiply', 'max']);
     str(l.sourceId, 100);
-    if (l.kind === 'image' && !p.sources.some(s => s.id === l.sourceId)) throw new Error('图层引用的灰度源不存在');
+    if (l.sourceId && !p.sources.some(s => s.id === l.sourceId)) throw new Error('图层引用的灰度源不存在');
+    if (l.kind === 'image' && !l.sourceId) throw new Error('图层引用的灰度源不存在');
+    const defaults=heightLayer(l.kind);
+    for(const key of ['algorithm','transform','response','shape','distribution','count','sizeMin','sizeMax','aspect','angleMin','angleMax','grayMin','grayMax','baseGray','alphaMin','alphaMax','spacing','centerX','centerY','sectors','path','objects','sourceMix','motion','amplitude','cycles','motionDirection','motionLocked'] as const)
+      if(l[key]===undefined) Object.assign(l,{[key]:defaults[key]});
+    choice(l.algorithm,Object.keys(algorithms));choice(l.transform,['fbm','turbulence','ridged']);choice(l.response,['all','dark','edge','alpha']);
+    choice(l.shape,Object.keys(particleShapes));choice(l.distribution,Object.keys(distributions));choice(l.motion,Object.keys(motions));
+    num(l.count,0,2000,true);num(l.sizeMin,.0001,.4);num(l.sizeMax,l.sizeMin,.4);num(l.aspect,.1,10);
+    num(l.angleMin,-720,720);num(l.angleMax,l.angleMin,720);num(l.grayMin,0,1);num(l.grayMax,l.grayMin,1);
+    num(l.baseGray,0,1);num(l.alphaMin,0,1);num(l.alphaMax,l.alphaMin,1);num(l.spacing,0,.5);num(l.centerX,0,1);num(l.centerY,0,1);num(l.sectors,2,16,true);
+    num(l.amplitude,0,.5);num(l.cycles,1,8,true);num(l.motionDirection,-360,360);bool(l.motionLocked);
+    if(!Array.isArray(l.path)||l.path.length<2||l.path.length>128)throw new Error('路径需要 2–128 个节点');
+    for(const q of l.path){object(q);num(q.x,0,1);num(q.y,0,1);}
+    if(!Array.isArray(l.objects)||l.objects.length>2000||!Array.isArray(l.sourceMix)||l.sourceMix.length>4)throw new Error('图形数量超出范围');
+    for(const q of l.sourceMix){object(q);str(q.id,100);num(q.weight,0,10);if(!p.sources.some(s=>s.id===q.id))throw new Error('混排素材不存在');}
+    for(const q of l.objects){
+      object(q);id(q.id);num(q.x,0,1);num(q.y,0,1);num(q.size,.0001,.4);num(q.angle,-720,720);num(q.aspect,.1,10);num(q.gray,0,1);num(q.opacity,0,1);
+      choice(q.shape,Object.keys(particleShapes));str(q.sourceId,100);bool(q.flipX);bool(q.flipY);bool(q.locked);bool(q.motionLocked);
+      if(q.sourceId&&!p.sources.some(s=>s.id===q.sourceId))throw new Error('手工素材不存在');
+      if(q.outlineSeed!==undefined)num(q.outlineSeed,0,2**32-1,true);
+    }
   }
+  if(p.timeline===undefined)p.timeline={duration:3,fps:24,phase:0};
+  object(p.timeline);num(p.timeline.duration,.25,30);num(p.timeline.fps,1,60,true);num(p.timeline.phase,0,1);
   object(p.normal); num(p.normal.strength, 0, 2); choice(p.normal.convention, ['opengl', 'directx']);
   object(p.export); num(p.export.size, 128, 4096, true);
   if (![128, 256, 512, 1024, 2048, 4096].includes(p.export.size)) throw new Error('导出尺寸不支持');

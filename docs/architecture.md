@@ -1,6 +1,30 @@
 # 架构与目录约定
 
-本文对应 0.4.0。默认入口为黑白纹理素材工作台；既有图形 / 动态入口为 `?studio=pattern`。两种项目模型独立，原有底图阵列保留在图形工作台内。
+本文对应 0.5.0。默认入口在同一 `MaterialProject` 内实现黑白连续场、图形、输入灰度 / Alpha 和循环动态；历史图形工作台保留在 `?studio=pattern`，原有项目格式不变。
+
+## 完整黑白纹理库
+
+`model.ts` 保存统一参数和旧项目迁移，`presets.ts` 补充 88 个预设，合计 119 个。视觉分类、图形排列和算法分别选择。
+
+| 文件 | 职责 |
+| --- | --- |
+| `algorithms.ts` | 周期 Value / Perlin / 4D torus Simplex / Worley；独立均匀、Gaussian、salt、Poisson；best-candidate Blue Noise；随机 Gabor 核 |
+| `particles.ts` | 统一图形实例、轮廓、弧长路径、周期避让、镜像 / 扇区、手工对象、逐粒灰度 / Alpha、局部采样桶 |
+| `effects.ts` | 胶片 / 纸浆 / 自然 / 笔触 / 表面 / 数字生成器；输入亮度、边缘与 Alpha 驱动 |
+| `animation.ts` | 周期属性 / 位置、散度为零的旋度场和 RK4；连续层使用 48² 周期 bicubic 映射缓存 |
+| `vector.ts` | 真实路径 / defs / use、源 SVG 清理与单色化；不兼容项阻止纯导出，效果模式嵌入 PNG |
+| `sequence.ts` | 相位 `frame / frameCount` 的 PNG 编码和 ZIP，manifest 保存时长 / 帧率 / 通道 / 项目 |
+| `MaterialLayerTools.tsx` | 分布、输入、手工图形、路径、算法和独立运动控制 |
+
+每层可保存 `objects`、`sourceMix`、路径、算法和运动；项目保存 `timeline`。手工轮廓有独立种子，参数随机不改其形状。图层锁定控制编辑，对象 / 图层的运动锁定单独生效。
+
+原图保持嵌入；解码保存 `pixels`（高度中灰合成）、`gray` 和 `alpha` 三个通道。SVG 按最长边 1024 px 解码，位图只降采样。DOM 清理 / 路径采样在主线程，Worker 只接收数值。
+
+连续字段使用解析或局部差分梯度；离散白噪声的格点内部梯度为零。预览 / 导出共用 UV 和 phase。流场先计算周期 RK4 位移网格，再用 bicubic 插值和导数映射采样梯度；没有逐帧累积误差。图形按实例轨迹计算，漂移走整数单元，其他连续模式用周期三角函数。
+
+静态 512 px 预览，播放时 192 px，渲染完成后再请求下一帧，避免无界堆积。参数改变会取消旧 Worker。序列最多 128 百万总像素。SVG 图形导出在主线程清理结构；位图 / 效果 / 序列在 Worker 内执行，可终止。
+
+数学、文件和界面验证见 `tests/library.spec.ts`；逐项清单和模拟边界见 [能力对照](texture-coverage.md)。
 
 ## 模块职责
 
@@ -15,7 +39,7 @@
 | `features/texture/components/` | 编辑画布与原有底图阵列界面 | `StudioCanvas.tsx`、`LegacyEditor.tsx` |
 | `features/export/` | 导出区域、检查、PNG/JPEG、三种 SVG、逐帧 ZIP | `studioExport.ts`、`studioSvg.ts`、`zip.ts` |
 | `shared/` | 公共 UI、旧版工具与桌面类型 | `ui/StudioFields.tsx`、`types/` |
-| `tests/` | 真实 Chromium 中的引擎性质、独立文件验证与 UI 验收 | `material.spec.ts`、`studio.spec.ts` |
+| `tests/` | 真实 Chromium 中的引擎性质、独立文件验证与 UI 验收 | `library.spec.ts`、`material.spec.ts`、`studio.spec.ts` |
 
 同一功能的界面、类型和状态放在一起，不创建规划功能的空目录。跨模块使用 `@/`，模块内优先使用相对路径。
 
@@ -40,7 +64,7 @@ flowchart LR
 
 预览与正式导出使用独立 Worker；更新参数或取消终止对应 Worker，返回的旧任务不会覆盖新图。Worker 内完成 PNG 编码和 ZIP 打包。灰度 PNG 为 type 0；透明黑白为 type 4，黑色 gray=0、alpha=1−height，白色 gray=1、alpha=height；法线 type 2。16 位从浮点场大端写入，zlib 与 CRC32 遵循 PNG 格式，不经过 Canvas 降至 8 位。
 
-`generatorControls` 统一定义每种生成器的参数标签与可用项；31 个预设附分类元数据。旧项目缺少 coverage / softness / pigment 时由解析器补全，原有颗粒密度按旧 detail 公式恢复，不改变种子。纸张纤维、高斯光晕采用紧支撑保证周期边缘，脉络 / 网点 / 排线 / 等高线 / 干涉也返回梯度。
+`generatorControls` 统一定义生成器标签；119 个预设附分类元数据。旧项目缺少新参数时由解析器补全，不改变种子；coverage 缺失时按旧 detail 公式恢复。纸张纤维、光晕与 Gabor 核采用紧支撑保证周期边缘。
 
 法线默认关闭。OpenGL / DirectX 仅绿色通道相反，强度不改变灰度。二维 Canvas 是 8 位预览；棋盘格等背景只由 CSS 提供。没有 WebGL 或 Three.js 依赖。细节和文件边界见 [material-studio.md](material-studio.md)。
 
@@ -89,4 +113,4 @@ PNG 序列采样首帧到循环结束前一帧，不重复结束帧。时长乘�
 
 `LegacyEditor` 沿用原 `assets/store.ts`、`texture/store.ts`、`generateLayout`、`renderScene` 与旧导出模块。旧 SVG 出口也进行清理与实例 ID 隔离；发现安全或效果兼容问题时，提示到工作台检查并使用相应出口。底图和位图素材的使用规则保持独立；新工作台的项目保存和循环序列不自动适用于该入口。
 
-连续黑白纹理使用独立材质引擎。后续路径排列与透明视频应分别扩展对应引擎和出口，不能绕过作品模型或静默降级。验收范围见 [development.md](development.md)。
+连续黑白纹理与可编辑路径已统一在材质引擎；旧图形入口没有路径排列。后续透明视频应扩展对应出口，不能绕过作品模型或静默降级。验收范围见 [development.md](development.md)。

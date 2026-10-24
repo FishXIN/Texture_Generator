@@ -1,6 +1,6 @@
 {
   "name": "texture-generator",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "A local monochrome texture studio for seamless patterns, Multiply overlays, transparent PNGs and optional normal maps.",
   "author": "Texture Generator",
@@ -39,6 +39,7 @@
     "lucide-react": "^0.453.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "simplex-noise": "^4.0.3",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.1"

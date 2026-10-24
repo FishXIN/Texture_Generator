@@ -1,7 +1,11 @@
 import type { HeightLayer, MaterialProject } from './model';
+import { algorithmField } from './algorithms';
+import { particleField } from './particles';
+import { motionAttributes, motionMap, phaseSeed } from './animation';
+import { effectField, sourceChannels } from './effects';
 
 export type Sample = { h: number; du: number; dv: number };
-export type DecodedSource = { id: string; width: number; height: number; pixels: Float32Array };
+export type DecodedSource = { id: string; width: number; height: number; pixels: Float32Array; gray?:Float32Array; alpha?:Float32Array };
 export type MaterialMaps = { size: number; height: Float32Array; normal: Uint8ClampedArray };
 type Field = (u: number, v: number, out: Sample) => void;
 const TAU = Math.PI * 2;
@@ -29,16 +33,19 @@ function noise(n: number, seed: number): Field {
   };
 }
 function fractal(l: HeightLayer): Field {
-  const fields = Array.from({ length: l.octaves }, (_, i) => noise(l.scale * 2 ** i, (l.seed + i * 1619) >>> 0));
+  const angle=l.direction==='horizontal'?0:l.direction==='vertical'?Math.PI/2:Math.PI/4;
+  const fields = Array.from({ length: l.octaves }, (_, i) => l.algorithm==='value'?noise(l.scale * 2 ** i, (l.seed + i * 1619) >>> 0):algorithmField(l.algorithm,l.scale*2**i,(l.seed+i*1619)>>>0,l.detail,angle));
   const weights = fields.map((_, i) => (0.2 + l.detail * 0.65) ** i);
   const sum = weights.reduce((a, b) => a + b, 0), t = scratch();
   return (u, v, o) => {
     o.h = o.du = o.dv = 0;
     for (let i = 0; i < fields.length; i++) {
       fields[i](u, v, t); const w = weights[i] / sum;
-      if (l.kind === 'ridged') {
+      if (l.kind === 'ridged'||l.transform==='ridged') {
         const sign = t.h < 0.5 ? 2 : -2;
         o.h += (1 - Math.abs(t.h * 2 - 1)) * w; o.du += t.du * sign * w; o.dv += t.dv * sign * w;
+      } else if(l.transform==='turbulence'){
+        const sign=t.h<.5?-2:2;o.h+=Math.abs(t.h*2-1)*w;o.du+=t.du*sign*w;o.dv+=t.dv*sign*w;
       } else { o.h += t.h * w; o.du += t.du * w; o.dv += t.dv * w; }
     }
   };
@@ -191,17 +198,19 @@ function marble(l: HeightLayer): Field {
     o.dv=d*TAU*(l.scale*ay+t.dv*distortion)+db*TAU*(-(l.scale+2)*ax+t.dv*distortion*1.5)+(.04+dm)*t.dv;
   };
 }
-function halftone(l: HeightLayer): Field {
+function halftone(l: HeightLayer,sources:DecodedSource[]): Field {
   const n=l.scale,variation=noise(3,l.seed),radii=new Float64Array(n*n),t=scratch();
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){
     variation((x+.5)/n,(y+.5)/n,t);
-    radii[y*n+x]=(.06+.43*l.coverage)*(1-l.detail*.85+l.detail*1.7*t.h);
+    const source=sources.find(s=>s.id===l.sourceId),s=sourceChannels(l,source,(x+.5)/n,(y+.5)/n);
+    radii[y*n+x]=source?Math.sqrt((1-s.gray)*s.alpha)*(.06+.5*l.coverage):(.06+.43*l.coverage)*(1-l.detail*.85+l.detail*1.7*t.h);
   }
   return(u,v,o)=>{
     const x=frac(u)*n,y=frac(v)*n,ix=Math.floor(x),iy=Math.floor(y);
     let ink=0,du=0,dv=0;
     for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
       const cx=ix+dx,cy=iy+dy,r=radii[mod(cy,n)*n+mod(cx,n)],vx=x-cx-.5,vy=y-cy-.5;
+      if(r===0)continue;
       const dist=Math.hypot(vx,vy),edge=.006+.22*l.softness,start=Math.max(.001,r-edge);
       const raw=(dist-start)/(2*edge),t=Math.max(0,Math.min(1,raw));
       ink+=1-t*t*(3-2*t);
@@ -300,26 +309,39 @@ function imageField(source: DecodedSource, seamless: boolean): Field {
     o.dv = (a.dv * wx + b.dv * (1 - wx)) * wy + (c.dv * wx + d.dv * (1 - wx)) * (1 - wy) + (top - bottom) * dy;
   };
 }
-function layerField(l: HeightLayer, sources: DecodedSource[]): Field {
+function layerField(l: HeightLayer, sources: DecodedSource[],phase=0,frames=72): Field {
+  l={...l,seed:phaseSeed(l,phase,frames)};
   let base: Field;
   if (l.kind === 'image') {
     const source = sources.find(s => s.id === l.sourceId); if (!source) throw new Error('灰度源解码失败');
     base = imageField(source, l.tileSource);
-  } else if (l.kind === 'noise' || l.kind === 'ridged') base = fractal(l);
+  } else if (l.kind === 'particles') base=particleField(l,sources,phase);
+  else if (l.kind === 'algorithm') base=algorithmField(l.algorithm,['uniform','gaussian','salt','poisson'].includes(l.algorithm)?l.scale*8:l.scale,l.seed,l.detail);
+  else if (l.kind === 'noise' || l.kind === 'ridged') base = fractal(l);
   else if (l.kind === 'cells' || l.kind === 'cracks') base = cellular(l);
   else if (l.kind === 'spots') base = spots(l);
   else if (l.kind === 'paper') base = paper(l);
   else if (l.kind === 'creases') base = creases(l);
   else if (l.kind === 'marble') base = marble(l);
-  else if (l.kind === 'halftone') base = halftone(l);
+  else if (l.kind === 'halftone') base = halftone(l,sources);
   else if (l.kind === 'hatch') base = hatch(l);
   else if (l.kind === 'interference') base = interference(l);
   else if (l.kind === 'contours') base = contours(l);
   else if (l.kind === 'glow' || l.kind === 'bokeh') base = lights(l);
-  else base = directional(l);
+  else if(l.kind==='fibers'||l.kind==='woven'||l.kind==='waves')base=directional(l);
+  else base=effectField(l,sources);
+  if(l.kind!=='particles'&&!l.motionLocked&&l.motion!=='none'&&l.motion!=='refresh'){
+    const still=base,attributes=motionAttributes(l,phase),map=motionMap(l,phase);
+    base=(u,v,o)=>{
+      const at=map(u,v);still(at.x,at.y,o);
+      const du=o.du,dv=o.dv;
+      const pulse=l.motion==='flicker'?1-l.amplitude*(1-Math.cos(TAU*phase*l.cycles+TAU*hash(Math.floor(frac(u)*l.scale),Math.floor(frac(v)*l.scale),l.seed)))/2:attributes.opacity;
+      o.h=1-(1-o.h)*pulse;o.du=(du*at.xu+dv*at.yu)*pulse;o.dv=(du*at.xv+dv*at.yv)*pulse;
+    };
+  }
   const wa = noise(3, l.seed ^ 31337), wb = noise(3, l.seed ^ 71391), a = scratch(), b = scratch();
   return (u, v, o) => {
-    const warp = l.kind === 'image' ? 0 : l.warp * 0.12;
+    const warp = l.kind === 'image'||l.kind==='particles' ? 0 : l.warp * 0.12;
     if (warp) {
       wa(u, v, a); wb(u, v, b);
       base(u + (a.h - 0.5) * warp, v + (b.h - 0.5) * warp, o);
@@ -332,8 +354,8 @@ function layerField(l: HeightLayer, sources: DecodedSource[]): Field {
     o.h = Math.max(0, Math.min(1, value)); o.du *= gain; o.dv *= gain;
   };
 }
-export function createSampler(p: MaterialProject, sources: DecodedSource[] = []): Field {
-  const layers = p.layers.filter(l => l.visible && l.opacity > 0).map(l => ({ l, field: layerField(l, sources) }));
+export function createSampler(p: MaterialProject, sources: DecodedSource[] = [],phase=p.timeline?.phase??0): Field {
+  const layers = p.layers.filter(l => l.visible && l.opacity > 0).map(l => ({ l, field: layerField(l, sources,phase,Math.round((p.timeline?.duration??3)*(p.timeline?.fps??24))) }));
   const t = scratch();
   return (u, v, o) => {
     o.h = 1; o.du = o.dv = 0;
@@ -355,8 +377,8 @@ export function encodeNormal(du: number, dv: number, strength: number, directX: 
   out[offset + 1] = directX ? 255 - g : g;
   out[offset + 2] = Math.round((inv * 0.5 + 0.5) * 255); out[offset + 3] = 255;
 }
-export function renderMaterial(p: MaterialProject, size: number, sources: DecodedSource[] = [], progress?: (v: number) => void): MaterialMaps {
-  const sample = createSampler(p, sources), t = scratch(), height = new Float32Array(size * size), normal = new Uint8ClampedArray(size * size * 4);
+export function renderMaterial(p: MaterialProject, size: number, sources: DecodedSource[] = [], progress?: (v: number) => void,phase=p.timeline?.phase??0): MaterialMaps {
+  const sample = createSampler(p, sources,phase), t = scratch(), height = new Float32Array(size * size), normal = new Uint8ClampedArray(size * size * 4);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       sample(x / size, y / size, t); const k = y * size + x;

@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### 0.5.0 Complete monochrome library
+
+- Expanded to 119 presets in 11 visual groups, with unified continuous fields, graphic particles, input grayscale/Alpha and animation.
+- Added 12 distributions, editable arc-length paths and SVG contour sampling, radial/mirror/kaleidoscope arrangements, weighted SVG mixing and manual dragging.
+- Added independent per-particle size, grayscale and Alpha ranges, persistent manual outline seeds and motion locks.
+- Implemented ten distinct noise algorithms with periodic Perlin gradients, 4D torus Simplex, count-based Poisson, spectrally checked best-candidate Blue Noise and random compact Gabor kernels.
+- Added film, dust/curved scratches, natural ribbons/rings/waves, painting/printing damage, surface and digital generators; input-driven halftone, Bayer and random dithering.
+- Added thirteen periodic motions, curl flow RK4 advection with cached continuous mapping, vortex rotation, flicker, grow/morph and repeating snow seeds.
+- Added PNG sequence ZIP, true graphic SVG and reusable SVG, and explicitly raster-embedded effects SVG. Existing 8/16-bit grayscale/Alpha and optional normal outputs remain.
+- Added browser acceptance for algorithm statistics/spectra, shared presets, time/UV loops, input Alpha, SVG pixels/straight channels, manual UI editing and compatibility.
+
 ### 0.4.0 Texture families
 
 - Expanded from 10 to 31 presets with paper, marble, pop/optical and soft-light families, category filtering and search.

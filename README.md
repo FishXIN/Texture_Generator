@@ -8,13 +8,17 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 
 [Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
 
-**Main contains the 0.4.0 source. Existing release installers retain their older capabilities; check the attached version.**
+**Main contains the 0.5.0 source. Existing release installers retain their older capabilities; check the attached version.**
 
 ![Monochrome texture studio](docs/images/texture-studio.png)
 
 ### Monochrome textures
 
-- 31 editable presets, grouped and searchable: papers, natural surfaces, pop/optical patterns and soft light.
+- 119 editable presets across 11 searchable visual groups: grain, fragments, film, paper, nature, painting, surfaces, digital, halftone, graphics and soft light.
+- Unified particles, editable paths, radial/mirror/kaleidoscope layouts, manual dragging, SVG stamps and weighted source mixing.
+- Independent particle density, size, grayscale and alpha ranges; safe original inputs retain separate grayscale and Alpha.
+- Thirteen looping motions, including RK4 curl flow, vortex, wave, flicker, evolution and discrete snow refresh.
+- Ten advanced algorithms: Value, Perlin, torus Simplex, Worley, uniform, Gaussian, salt-and-pepper, Poisson counts, blue noise and random Gabor kernels.
 - Xuan, mulberry, cotton, watercolor, laid, recycled, kraft, aged and crumpled paper; white/black marble and ink marbling.
 - Halftone dots, variable dots, comic hatching, spectral interference and contours; glow, bokeh, mist and satin patterns.
 - Periodic noise, ridged noise, cellular patterns and smooth seeded dots with shared height/gradient calculations.
@@ -31,6 +35,9 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 | White transparent PNG, 8 / 16 bit | White pigment with alpha = grayscale; light overlays |
 | Optional normal PNG, RGB 8 bit | Tangent-space directions, OpenGL +Y or DirectX −Y; import as non-color data |
 | Paired ZIP | Texture, normal and an output manifest |
+| Pure / optimized SVG | Actual graphic paths and reusable structures; incompatible effects are rejected |
+| Effects SVG | Explicitly embeds PNG to retain continuous effects |
+| PNG sequence ZIP | Arbitrary-frame loops, optional Alpha / normals, timing manifest |
 
 The default is an 8-bit grayscale PNG with normal output disabled. Export sizes are 128–4096 px; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
 
@@ -38,7 +45,7 @@ The default is an 8-bit grayscale PNG with normal output disabled. Export sizes 
 
 Paper and stone presets are procedural style simulations, not physical scans.
 
-Limits: eight layers, four imported sources, 5 MB per source and 25 MB per project. Imported sources decode at up to 1024 px on the longest edge; enlarging cannot recover detail. Transparent source areas use middle gray. Periodic blending changes the input; disabling it removes the seamless guarantee. High-detail 4K rendering can take longer. Periodicity does not eliminate perceptible repetition.
+Limits: eight layers, four imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Imported sources decode at up to 1024 px; height layers composite transparency onto middle gray while graphic/printing layers retain Alpha. Periodic blending changes the input. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; animation preview is 192 px. High-detail 4K rendering can take longer.
 
 No colored material channels, 3D viewport, node editor or model baking is included. See [implementation and boundaries](docs/material-studio.md).
 
@@ -74,7 +81,7 @@ Choose the canvas, a selection, a seamless unit or a filled pattern. Export chec
 
 SVG source files are retained. Scripts and external references are removed; unsupported elements and complex styles are reported. Text should be outlined before import. Blend modes, fonts and filters still require verification in the target design software.
 
-Seamless drift uses eight snapped directions and integer tile journeys; duration and cycle count control speed without reseeding the layout. Spacing is conservative and constraints can reduce the resulting count. Continuous monochrome noise is available in the main workspace. Path layouts, transparent video, PDF and animated SVG remain future work.
+Seamless drift uses eight snapped directions and integer tile journeys; duration and cycle count control speed without reseeding the layout. Spacing is conservative and constraints can reduce the resulting count. Continuous monochrome noise and editable paths are available in the main workspace. This older workspace does not have path layouts. Transparent video, PDF and animated SVG remain future work.
 
 Limits: 64–4096 px canvas, 16 layers, 32 SVG assets, 20,000 generated particles and 2,000 manual objects. SVG inputs are limited to 5 MB each and projects to 25 MB. Static raster export supports up to 16 MP / 8192 px; sequences support 4 MP per frame, 720 frames and a 256 MB ZIP. Large or complex SVGs can still be expensive to render.
 
@@ -98,7 +105,7 @@ npm test
 npm run dist:mac                  # On Windows: npm run dist:win
 ```
 
-Nineteen Playwright scenarios cover all preset fields/gradients, dedicated controls, old-project defaults, true 16-bit PNG and black/white alpha data, normal conventions, reproducibility and the existing graphics/motion workflow.
+Playwright scenarios cover preset reproducibility, algorithm statistics/gradients, blue-noise spectral suppression, periodic time/UV, input Alpha, SVG pixel agreement, true 16-bit PNG, manual dragging, undo and the existing workflow.
 
 Project architecture: `src/app` routes the workspaces; `features/material` owns monochrome fields, Worker generation, PNG encoding and the 2D editor; `project`, `assets`, `texture` and `export` retain the graphics/motion workflow. See [architecture](docs/architecture.md) and [contributing](CONTRIBUTING.md).
 
@@ -114,26 +121,35 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 [English](#english) · [产品策划](docs/product-plan.md) · [能力对照](docs/texture-coverage.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [变更记录](CHANGELOG.md) · [已发布安装包](https://github.com/FishXIN/Texture_Generator/releases)
 
-> 主分支为 **0.4.0** 工作台源码。GitHub Releases 中的旧版安装包仍是旧功能，以附件版本为准。
+> 主分支为 **0.5.0** 工作台源码。GitHub Releases 中的旧版安装包仍是旧功能，以附件版本为准。
 
 ![黑白纹理工作台实际界面](docs/images/texture-studio.png)
 
 ### 黑白纹理工作台
 
-默认打开黑白素材画布。内置 **31 个可编辑预设**，可以按分类筛选或搜索：
+默认打开黑白素材画布。内置 **119 个可编辑预设、11 个视觉分类**。颗粒、点与碎片、胶片、纸张、自然连续、绘画印刷、表面、数字故障、网点 / 波谱、图形、柔光分别筛选，算法放在高级面板。
+
+图形、连续纹理和动态使用同一项目：12 种排列、路径节点 / SVG 轮廓读取、镜像、万花筒、手工拖动；独立尺寸 / 明暗 / 透明度；输入灰度和 Alpha 驱动半调、复印、印章与磨损。13 种循环运动覆盖流场、波浪、涡旋、呼吸、闪烁、消散、形变、视差、雪花刷新与演化。10 种基础算法均有实际实现。[逐项能力与边界](docs/texture-coverage.md)。
 
 | 分类 | 纹理 |
 | --- | --- |
+| 基础颗粒 | 细密、粗粒、混合、稀疏、高密、单色、明暗、半透明、柔边、硬边、团簇 |
+| 点与碎片 | 圆点、椭圆、不规则斑点、方块、多边形、短线、星点、空心圆环、碎屑、飞溅 |
+| 胶片 | 黑白胶片、高感粗粒、暗部噪点、灰尘、划痕、老照片、复印墨粉 |
 | 纸张 | 宣纸、桑皮纸、棉纸、水彩纸、帘纹纸、再生纸、牛皮纸、旧纸、褶皱纸，以及纸张颗粒和方向纤维 |
-| 自然表面 | 白 / 黑大理石、水墨流纹、岩石、混凝土、斑驳、裂纹、细胞与编织 |
-| 波普 / 波谱 | 波普网点、渐变网点、漫画排线、波谱干涉、等高线、颗粒与波纹 |
+| 自然连续 | 云雾、烟气、团块、湍流、木纹、地形、水波、火焰 |
+| 绘画印刷 | 喷漆、喷枪、墨水渗化、干刷、铅笔、炭笔、粉笔、蜡笔、丝网、印章、油墨磨损 |
+| 材质表面 | 白 / 黑大理石、水墨流纹、沙粒、岩石、混凝土、石膏、灰泥、锈蚀、磨砂、拉丝、刮擦、剥落、裂纹、编织 |
+| 数字故障 | 黑白雪花、像素颗粒 / 块面、扫描线、条带、故障切片、压缩失真、信号干扰 |
+| 网点 / 波谱 | 圆 / 方 / 椭圆 / 线网点、随机 / 有序抖动、均匀 / 间距 / 聚集散点、渐变 / 放射 / 路径点阵、漫画排线、波谱干涉、等高线 |
+| 图形 | 单图形、多图形、随机尺寸 / 旋转、错位、镜像、万花筒、彩纸形状、花草、符号、有机轮廓、手工编排 |
 | 柔光 | 柔光光晕、散焦光斑、雾面柔纹、丝绸柔纹 |
 
 ![新增纹理实际效果](docs/images/texture-families.png)
 
 这些效果是可重复编辑的程序化模拟，适合设计素材制作；纸张和石材不标为实物扫描。
 
-| 能力 | 0.4.0 |
+| 能力 | 0.5.0 |
 | --- | --- |
 | 连续纹理 | 周期多尺度噪声、脊线、细胞 / 裂纹、方向纹路与平滑随机斑点 |
 | 精细控制 | 按纹理显示纤维密度、柔和度、脉络宽度、网点覆盖、光斑范围等参数；密度与权重独立 |
@@ -153,10 +169,13 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 | 白色透明 PNG · 8 / 16 位 | 白色光晕＋Alpha，亮度作为透明度；用于柔光叠加 |
 | 法线 PNG · RGB 8 位 | 按需启用，蓝紫色为方向编码；作为非颜色数据读取 |
 | 纹理＋法线 ZIP | 两张配套 PNG 与尺寸、种子、位深、方向说明 |
+| 纯 / 优化 SVG | 真实路径、图形与复用结构；软边、连续纹理和效果混合需换效果模式 |
+| 效果 SVG | 明确嵌入 PNG，保留连续灰度 / Alpha |
+| PNG 序列 ZIP | 任意相位循环采样，支持透明和可选法线，附时长 / 帧率说明 |
 
 导出 128–4096 px，预览 512 px；16 位从浮点灰度直接编码，保留超过 256 级的细节。默认导出黑白 8 位 PNG，法线默认关闭。柔光类不透明图可使用滤色或柔光混合，透明白色版可直接增加光晕。透明衬底与预览边界不会写入文件。旧 0.3.0 项目可打开，新参数自动补全。
 
-最多 8 层、4 导入源；单个素材 5 MB，项目 25 MB。导入源解码上限 1024 px，放大不会恢复原图细节；透明区域按中灰读取。周期边缘融合会修改原图，关闭后不保证无缝。4K 或高层级生成可能较慢。无缝连续不代表没有可感知的重复节奏。
+最多 8 层、4 导入源、每层 2000 个普通图形，蓝噪 / 最小间距最多 512 个；单个素材 5 MB，项目 25 MB。导入源解码上限 1024 px；高度层透明区域按中灰读取，图形 / 印刷层保留独立 Alpha。序列总像素上限 128 百万。静态预览 512 px，动态 192 px。周期融合会修改原图，关闭后不保证无缝。
 
 不包含彩色材质、3D 预览、节点编辑器或模型烘焙。用于高度 / 法线时请按 Non-Color 数据读取；目标软件的导入设置仍需核对。[实现与边界](docs/material-studio.md)。
 
@@ -198,7 +217,7 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 - SVG 清理脚本、外部引用和不支持的元素，保留原始文件供下载。支持简单标签、类、ID 与后代 / 子代样式选择器；复杂样式会提示。文字建议在设计软件中转轮廓。
 - 空间无缝漂移吸附到八个方向，按整数个单元循环；速度由时长与循环次数控制。运动参数不会重抽静态分布。
 - 间距是保守的包围范围避让，蒙版按 Alpha 采样选择生成位置，再按轮廓裁切显示；限制可能降低实际数量。
-- 本入口提供图形颗粒；连续黑白纹理位于默认工作台。沿路径排列、透明视频、PDF 与动态 SVG 尚未提供。
+- 本入口提供图形颗粒；连续黑白纹理和可编辑路径位于默认工作台。此旧入口没有路径排列；透明视频、PDF 与动态 SVG 尚未提供。
 - SVG 混合与效果仍需在目标设计软件核对。浏览器像素检查通过不等于所有设计软件均已验证。
 
 规模限制：画布 64–4096 px，16 图层、32 SVG 素材、20,000 自动颗粒、2,000 手工对象；单个 SVG 5 MB，项目 25 MB。静态位图最多 16 MP / 8192 px；序列每帧最多 4 MP、720 帧、ZIP 256 MB。复杂 SVG 或高密度作品仍可能较慢，编辑预览降采样不会改变种子与排列。详见[开发与验收](docs/development.md)。
@@ -232,7 +251,7 @@ npm test           # 真实浏览器验收
 npm run dist:mac   # macOS 安装包；Windows 使用 dist:win
 ```
 
-安装包输出到 `release/`，不提交到源码仓库。19 项浏览器验收涵盖全部预设的周期灰度与梯度、参数有效性、旧项目兼容、种子和分辨率一致、真实 16 位 PNG / 黑白 Alpha、法线方向，以及原有图形、SVG 和动态输出。[环境与证书说明](docs/development.md)。
+安装包输出到 `release/`，不提交到源码仓库。浏览器验收覆盖预设复现、算法统计 / 梯度、蓝噪频谱、空间 / 时间循环、输入 Alpha、SVG 像素对照、16 位 PNG、手工拖动 / 撤销和旧工作台兼容。[环境与证书说明](docs/development.md)。
 
 ### 目录
 

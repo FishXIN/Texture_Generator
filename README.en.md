@@ -4,13 +4,17 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 
 [简体中文](README.md#简体中文) · [Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
 
-**Main contains the 0.4.0 source. Existing release installers retain their older capabilities; check the attached version.**
+**Main contains the 0.5.0 source. Existing release installers retain their older capabilities; check the attached version.**
 
 ![Monochrome texture studio](docs/images/texture-studio.png)
 
 ## Monochrome textures
 
-- 31 editable presets, grouped and searchable: papers, natural surfaces, pop/optical patterns and soft light.
+- 119 editable presets across 11 searchable visual groups, with unified continuous fields, graphic particles, input grayscale/Alpha and animation.
+- Twelve layouts: random, grid, stagger, cluster, spaced, blue noise, gradient, radial, editable/SVG path, mirror, kaleidoscope and manual dragging.
+- Independent particle size, grayscale and Alpha ranges; weighted SVG input mixing and persistent manual outline seeds.
+- Thirteen periodic motions including RK4 curl flow, vortex, wave, flicker, grow, morph, parallax, snow refresh and evolution.
+- Ten advanced algorithms: Value, Perlin, torus Simplex, Worley, uniform, Gaussian, salt-and-pepper, Poisson counts, Blue Noise and random Gabor kernels.
 - Xuan, mulberry, cotton, watercolor, laid, recycled, kraft, aged and crumpled paper; white/black marble and ink marbling.
 - Halftone dots, variable dots, comic hatching, spectral interference and contours; glow, bokeh, mist and satin patterns.
 - Periodic noise, ridged noise, cellular patterns and smooth seeded dots with shared height/gradient calculations.
@@ -27,6 +31,9 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 | White transparent PNG, 8 / 16 bit | White pigment with alpha = grayscale; light overlays |
 | Optional normal PNG, RGB 8 bit | Tangent-space directions, OpenGL +Y or DirectX −Y; import as non-color data |
 | Paired ZIP | Texture, normal and an output manifest |
+| Pure / optimized SVG | Actual graphic paths and reusable structures; incompatible effects are rejected |
+| Effects SVG | Explicitly embeds PNG to retain continuous effects |
+| PNG sequence ZIP | Looping frames, optional Alpha / normals and timing manifest |
 
 The default is an 8-bit grayscale PNG with normal output disabled. Export sizes are 128–4096 px; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
 
@@ -34,7 +41,7 @@ The default is an 8-bit grayscale PNG with normal output disabled. Export sizes 
 
 Paper and stone presets are procedural style simulations, not physical scans.
 
-Limits: eight layers, four imported sources, 5 MB per source and 25 MB per project. Imported sources decode at up to 1024 px on the longest edge; enlarging cannot recover detail. Transparent source areas use middle gray. Periodic blending changes the input; disabling it removes the seamless guarantee. High-detail 4K rendering can take longer. Periodicity does not eliminate perceptible repetition.
+Limits: eight layers, four imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Imported sources retain separate grayscale and Alpha at up to 1024 px. Height layers composite transparency onto middle gray, while graphics/printing use the original Alpha. Periodic blending changes the input. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; animation is 192 px.
 
 No colored material channels, 3D viewport, node editor or model baking is included. See [implementation and boundaries](docs/material-studio.md).
 
@@ -70,7 +77,7 @@ Choose the canvas, a selection, a seamless unit or a filled pattern. Export chec
 
 SVG source files are retained. Scripts and external references are removed; unsupported elements and complex styles are reported. Text should be outlined before import. Blend modes, fonts and filters still require verification in the target design software.
 
-Seamless drift uses eight snapped directions and integer tile journeys; duration and cycle count control speed without reseeding the layout. Spacing is conservative and constraints can reduce the resulting count. Continuous monochrome noise is available in the main workspace. Path layouts, transparent video, PDF and animated SVG remain future work.
+Seamless drift uses eight snapped directions and integer tile journeys; duration and cycle count control speed without reseeding the layout. Spacing is conservative and constraints can reduce the resulting count. Continuous monochrome noise and editable paths are available in the main workspace. This older workspace does not have path layouts. Transparent video, PDF and animated SVG remain future work.
 
 Limits: 64–4096 px canvas, 16 layers, 32 SVG assets, 20,000 generated particles and 2,000 manual objects. SVG inputs are limited to 5 MB each and projects to 25 MB. Static raster export supports up to 16 MP / 8192 px; sequences support 4 MP per frame, 720 frames and a 256 MB ZIP. Large or complex SVGs can still be expensive to render.
 
@@ -94,7 +101,7 @@ npm test
 npm run dist:mac                  # On Windows: npm run dist:win
 ```
 
-Nineteen Playwright scenarios cover all preset fields/gradients, dedicated controls, old-project defaults, true 16-bit PNG and black/white alpha data, normal conventions, reproducibility and the existing graphics/motion workflow.
+Twenty-seven Playwright scenarios cover all 119 presets, algorithm statistics and gradients, blue-noise spectral suppression, periodic space and time, input Alpha, SVG pixel agreement, true 16-bit PNG, manual dragging, undo, old-project defaults and the existing graphics/motion workflow.
 
 Project architecture: `src/app` routes the workspaces; `features/material` owns monochrome fields, Worker generation, PNG encoding and the 2D editor; `project`, `assets`, `texture` and `export` retain the graphics/motion workflow. See [architecture](docs/architecture.md) and [contributing](CONTRIBUTING.md).
 
