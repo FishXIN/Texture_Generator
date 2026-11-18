@@ -87,6 +87,11 @@ jobs:
         shell: bash
         run: |
           cd release-artifacts
+          # GitHub replaces spaces in uploaded asset names with dots.
+          for asset in *.dmg *.exe; do
+            normalized="${asset// /.}"
+            if [ "$asset" != "$normalized" ]; then mv -- "$asset" "$normalized"; fi
+          done
           sha256sum *.dmg *.exe > SHA256SUMS.txt
           cd ..
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
