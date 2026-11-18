@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-15
             build_script: dist:mac
           - os: windows-latest
             build_script: dist:win
