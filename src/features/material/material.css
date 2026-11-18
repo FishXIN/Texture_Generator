@@ -40,7 +40,8 @@
 .material-preset .material-map{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover;background:var(--panel-bg);border-radius:var(--control-radius)}
 .material-preset>span{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .material-assets{padding:20px;min-height:150px;max-height:49%;flex:1;overflow:auto}
-.material-source{display:flex;width:100%;padding:8px 5px;text-align:left}
+.material-source-row{display:flex;align-items:center;gap:4px}
+.material-source{display:flex;flex:1;min-width:0;padding:8px 5px;text-align:left}
 .material-source canvas{flex-shrink:0;width:38px;height:38px;border-radius:var(--control-radius);background:repeating-conic-gradient(#e5e7ee 0% 25%,#f7f8fa 0% 50%) 50%/12px 12px}
 .material-source span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
 .material-layer-heading{padding:20px 0 12px;margin:0 20px;border-top:1px solid var(--m-line);display:flex;align-items:center;justify-content:space-between;font-weight:500;flex-shrink:0;color:var(--m-muted)}

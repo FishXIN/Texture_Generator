@@ -16,7 +16,7 @@ export async function exportMaterial(p: MaterialProject, maps: MaterialMaps, pro
   }
   if (p.export.maps !== 'both') return { blob: new Blob([new Uint8Array(files[0].data)], { type: 'image/png' }), filename: files[0].name, extension: 'png' };
   files.push({ name: 'manifest.json', data: new TextEncoder().encode(JSON.stringify({
-    generator: 'Texture Generator 0.6.0', size,width:maps.width??size,height:maps.pixelHeight??size,scope:p.export.scope, seamless: isSeamless(p),phase:p.timeline.phase,
+    generator: 'Texture Generator 0.7.0', size,width:maps.width??size,height:maps.pixelHeight??size,scope:p.export.scope, seamless: isSeamless(p),phase:p.timeline.phase,
     texture: { bitDepth: maps.composition?8:p.export.depth, colorType: maps.composition?'RGBA':p.export.background === 'transparent' ? 'grayscale-alpha' : 'grayscale', background: p.export.background,
       range: [0, 1], alpha: maps.composition?'original source Alpha and layer coverage':p.export.background === 'transparent' ? p.export.pigment === 'white' ? 'white pigment with alpha = grayscale' : 'black pigment with alpha = 1 - grayscale' : 'opaque', space: maps.composition?'untagged RGBA':'untagged grayscale' },
     normal: { bitDepth: 8, colorType: 'RGB', space: 'linear data', convention, tangentSpace: true, strength: p.normal.strength, formula: 'normalize(-dh/du * strength * 0.05, +dh/dv * strength * 0.05, 1); DirectX flips green', imageV: 'down' },

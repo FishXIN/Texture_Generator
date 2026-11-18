@@ -1,4 +1,4 @@
-import { createParticles } from './particles';
+import { layerParticles, artworkSize, artworkCopies } from './artwork';
 import { phaseSeed } from './animation';
 import type { HeightLayer, MaterialProject } from './model';
 import type { DecodedSource, Sample } from './engine';
@@ -34,17 +34,12 @@ export function renderComposition(p:MaterialProject,width:number,height:number,s
         }
       }
     }else if(l.role==='elements'){
-      for(const o of createParticles({...l,seed:phaseSeed(l,phase,Math.round(p.timeline.duration*p.timeline.fps))},phase)){
+      for(const o of layerParticles(p,{...l,seed:phaseSeed(l,phase,Math.round(p.timeline.duration*p.timeline.fps))},phase)){
         const image=images.get(o.sourceId);if(!image)continue;
-        const w=o.size*2*width*o.aspect,h=o.size*2*width,imageAspect=image.width/image.height;
-        const dw=imageAspect>=1?w:w*imageAspect,dh=imageAspect>=1?h/imageAspect:h;
-        // Repeat complete objects across all intersected tile edges.
-        const radius=Math.hypot(dw,dh)/2;
-        const nx=Math.ceil(radius/width),ny=Math.ceil(radius/height);
-        for(let y=-ny;y<=ny;y++)for(let x=-nx;x<=nx;x++){
-          const cx=(o.x+x)*width,cy=(o.y+y)*height;
-          if(cx+radius<0||cx-radius>width||cy+radius<0||cy-radius>height)continue;
-          ctx.save();ctx.globalAlpha=l.opacity*o.opacity;ctx.translate(cx,cy);ctx.rotate(o.angle*Math.PI/180);
+        const source=p.sources.find(s=>s.id===o.sourceId)!;
+        const {width:dw,height:dh}=artworkSize(o,source,width);
+        for(const at of artworkCopies(l,o,width,height,dw,dh)){
+          ctx.save();ctx.globalAlpha=l.opacity*o.opacity;ctx.translate(at.x,at.y);ctx.rotate(o.angle*Math.PI/180);
           ctx.scale(o.flipX?-1:1,o.flipY?-1:1);ctx.drawImage(image,-dw/2,-dh/2,dw,dh);ctx.restore();
         }
       }

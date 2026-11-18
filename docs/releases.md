@@ -4,7 +4,7 @@
 
 安装包统一在 [GitHub Releases](https://github.com/FishXIN/Texture_Generator/releases) 管理，[最新版本入口](https://github.com/FishXIN/Texture_Generator/releases/latest)跟随发布更新。
 
-当前最新发布为 `v0.1.5`，附件包括 macOS arm64 `.dmg` 和 Windows x64 `.exe`。其他架构以各版本实际附件为准，不依据构建配置推断支持。
+当前最新发布为 `v0.7.0`，附件包括 macOS `.dmg` 和 Windows x64 `.exe`。其他架构以各版本实际附件为准，不依据构建配置推断支持。
 
 主分支文档和代码可能包含尚未发布的改动；已下载的旧安装包不会自动获得这些改动。发布记录见 [CHANGELOG](../CHANGELOG.md)。
 
@@ -23,7 +23,7 @@ Windows 使用可选择安装目录的 NSIS 安装流程。当前流程未配置
 
 ## GitHub Actions
 
-`.github/workflows/release.yml` 在 `v*` 标签推送或手动执行时运行，分别在 macOS 和 Windows 安装依赖、构建安装包并上传工作流产物。`electron-builder` 在标签发布环境下使用 `GH_TOKEN` 发布 GitHub Release 附件。
+`.github/workflows/release.yml` 在 `v*` 标签推送或手动执行时运行，分别在 macOS 和 Windows 安装依赖、构建安装包并上传工作流产物。浏览器验收通过后，构建安装包并运行 `npm run smoke:desktop` 检查打包应用。两个系统均通过后，独立发布任务上传安装包与 SHA256SUMS.txt 并公开 Release；手动主分支运行只构建，不发布。
 
 发布前：
 
@@ -32,4 +32,4 @@ Windows 使用可选择安装目录的 NSIS 安装流程。当前流程未配置
 3. 确认标签版本与包版本一致。
 4. 推送发布标签，检查两种系统的工作流和 Release 附件。
 
-普通源码或文档优化不创建新标签，也不会替换现有安装包。手动工作流运行主要用于构建检查；发布行为以标签和 electron-builder 的发布策略为准。
+普通源码或文档优化不创建新标签，也不会替换现有安装包。手动工作流运行主要用于构建检查；正式发布由标签触发，并在所有验收通过后由独立任务完成。

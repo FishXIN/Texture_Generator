@@ -19,7 +19,7 @@ export async function exportSequence(p:MaterialProject,size:number,sources:Decod
     progress?.((frame+1)/frames);
   }
   files.push({name:'manifest.json',data:new TextEncoder().encode(JSON.stringify({
-    generator:'Texture Generator 0.6.0',frames,fps:p.timeline.fps,duration:frames/p.timeline.fps,requestedDuration:p.timeline.duration,
+    generator:'Texture Generator 0.7.0',frames,fps:p.timeline.fps,duration:frames/p.timeline.fps,requestedDuration:p.timeline.duration,
     size,width:dims.width,height:dims.height,scope:p.export.scope,depth:p.layers.some(l=>l.role!=='texture'&&(p.export.scope!=='material'||l.role!=='background'))?8:p.export.depth,background:p.export.background,pigment:p.export.pigment,
     alpha:p.export.background==='transparent'?(p.export.pigment==='white'?'grayscale':'1-grayscale'):'opaque',
     seamless:isSeamless(p),phase:'frame / frameCount; [0, 1); endpoint is not duplicated',

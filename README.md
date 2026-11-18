@@ -8,9 +8,15 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 
 [Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
 
-**Main contains the 0.6.0 source. Existing release installers retain their older capabilities; check the attached version.**
+**Version 0.7.0 combines editable custom artwork and the monochrome workbench. Download the matching installer from Releases.**
 
 ![Monochrome texture studio](docs/images/texture-studio.png)
+
+### Custom artwork
+
+Upload your own PNG / SVG elements, generate a pattern, then switch to Manual to edit individual objects. Original colors and Alpha are preserved. Choose seamless tiling or canvas-only placement with element spacing and edge margins. Spacing −1 permits overlaps; 0 or higher uses conservative bounds to avoid overlaps. Constraints apply to static automatic placement; manual edits and motion can leave those bounds.
+
+Export **Editable SVG** to keep SVG shapes and independent raster image objects. In compositions, continuous textures remain separate image layers; texture-only compositions remain one image when they cannot be represented as vectors. **Pure / optimized SVG** retains colored SVG artwork and rejects raster or incompatible effects. **Effects SVG** flattens the full appearance into one PNG. Editable exports are capped at 64 MB. Source removal cleans references and supports undo; locked references must be unlocked first.
 
 ### Monochrome textures
 
@@ -42,7 +48,8 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 | White transparent PNG, 8 / 16 bit | White pigment with alpha = grayscale; light overlays |
 | Optional normal PNG, RGB 8 bit | Tangent-space directions, OpenGL +Y or DirectX −Y; import as non-color data |
 | Paired ZIP | Texture, normal and an output manifest |
-| Pure / optimized SVG | Actual graphic paths and reusable structures; incompatible effects are rejected |
+| Editable SVG | SVG shapes and independent raster objects; continuous textures remain images |
+| Pure / optimized SVG | Colored artwork, graphic paths and reusable structures; incompatible effects are rejected |
 | Effects SVG | Explicitly embeds PNG to retain continuous effects |
 | PNG sequence ZIP | Arbitrary-frame loops, optional Alpha / normals, timing manifest |
 
@@ -128,9 +135,17 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 [English](#english) · [产品策划](docs/product-plan.md) · [能力对照](docs/texture-coverage.md) · [迭代路线](docs/roadmap.md) · [开发指南](docs/development.md) · [变更记录](CHANGELOG.md) · [已发布安装包](https://github.com/FishXIN/Texture_Generator/releases)
 
-> 主分支为 **0.6.0** 工作台源码。GitHub Releases 中的旧版安装包仍是旧功能，以附件版本为准。
+> **0.7.0** 将自定义图案与黑白纹理工作台一起交付。安装包请在 GitHub Releases 下载，核对附件中的版本与架构。
 
 ![黑白纹理工作台实际界面](docs/images/texture-studio.png)
+
+### 自定义图案
+
+上传自己的 PNG / SVG 元素，自动生成图案，再切换「手工」逐个移动、旋转、缩放或替换素材。保留原色与透明度，支持混排比例。选择「无缝平铺」或「画布内排列」；元素间距 −1 允许重叠，0 及以上按保守包围范围避让，边缘间距控制留白。约束作用于静态自动排列；手工编辑和运动可以越过该范围。空间不足时会减少生成数量。
+
+「**可编辑 SVG**」保留 SVG 图形和独立的 PNG / JPEG / WebP 图片对象；混合作品中的连续纹理保留为图片图层，仅连续纹理的作品按整张图片保留。「矢量 / 优化 SVG」支持原色 SVG，拒绝位图和不兼容效果。「保留效果 SVG」将整张画面合成一张 PNG。PNG 不会转换为矢量路径。可编辑导出最多 64 MB，目标软件的混合、滤镜和字体表现仍需按实际导入检查。
+
+「我的素材」可移除素材及其引用，支持撤销；锁定引用需先解锁。替换独立背景不会不断占用素材名额。恢复提示出现后，旧副本会保留到选择恢复或关闭。
 
 ### 黑白纹理工作台
 
@@ -164,7 +179,7 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 
 这些效果是可重复编辑的程序化模拟，适合设计素材制作；纸张和石材不标为实物扫描。
 
-| 能力 | 0.6.0 |
+| 能力 | 0.7.0 |
 | --- | --- |
 | 连续纹理 | 周期多尺度噪声、脊线、细胞 / 裂纹、方向纹路与平滑随机斑点 |
 | 精细控制 | 按纹理显示纤维密度、柔和度、脉络宽度、网点覆盖、光斑范围等参数；密度与权重独立 |
@@ -185,7 +200,8 @@ Project architecture: `src/app` routes the workspaces; `features/material` owns 
 | 白色透明 PNG · 8 / 16 位 | 白色光晕＋Alpha，亮度作为透明度；用于柔光叠加 |
 | 法线 PNG · RGB 8 位 | 按需启用，蓝紫色为方向编码；作为非颜色数据读取 |
 | 纹理＋法线 ZIP | 两张配套 PNG 与尺寸、种子、位深、方向说明 |
-| 纯 / 优化 SVG | 真实路径、图形与复用结构；软边、连续纹理和效果混合需换效果模式 |
+| 可编辑 SVG | SVG 保留矢量；PNG 等位图保留独立图片对象；连续纹理保留图片 |
+| 纯 / 优化 SVG | 原色矢量素材、真实路径与复用结构；含位图或连续效果时改用可编辑 / 效果模式 |
 | 效果 SVG | 明确嵌入 PNG，保留连续灰度 / Alpha |
 | PNG 序列 ZIP | 任意相位循环采样，支持透明和可选法线，附时长 / 帧率说明 |
 

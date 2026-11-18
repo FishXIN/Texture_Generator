@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, Copy, Download, Eye, EyeOff, ImagePlus, Layers,
 import { Field, SelectField, Toggle } from '@/shared/ui/StudioFields';
 import { StudioSelect } from '@/shared/ui/StudioSelect';
 import { saveBlob } from '@/features/project/io';
-import { generators, generatorControls, presetGroups, heightLayer, materialId, materialPresets, newMaterial, parseMaterial } from './model';
+import { generators, generatorControls, presetGroups, heightLayer, materialId, materialPresets, newMaterial, parseMaterial, layerUsesSource } from './model';
 import type { Generator, HeightLayer, HeightSource } from './model';
 import { useMaterialStore } from './store';
 import { decodeSource, importHeight } from './import';
@@ -13,7 +13,7 @@ import { MaterialExportPanel } from './MaterialExportPanel';
 import { MaterialCanvasSize } from './MaterialCanvasSize';
 import { materialFilename } from './export';
 import { MaterialLayerTools } from './MaterialLayerTools';
-import { createParticles } from './particles';
+import { layerParticles, artworkHit } from './artwork';
 import { frac, torusDistance } from './algorithms';
 import { useMaterialPreview } from './useMaterialPreview';
 import './material.css';
@@ -39,7 +39,8 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
   const [category,setCategory]=useState<keyof typeof presetGroups>('all'),[search,setSearch]=useState('');
   const [library,setLibrary]=useState<'textures'|'assets'>('textures');
   const [exportOpen,setExportOpen]=useState(false),[menu,setMenu]=useState(false),[saving,setSaving]=useState(false),[importing,setImporting]=useState(false);
-  const [recovery,setRecovery]=useState(false),[tiled,setTiled]=useState(false),[checkBackground,setCheckBackground]=useState('checker');
+  const [recovery,setRecovery]=useState<string|null>(()=>{try{return localStorage.getItem('texture-material-recovery');}catch{return null;}});
+  const [tiled,setTiled]=useState(false),[checkBackground,setCheckBackground]=useState('checker');
   const [previewChannel,setPreviewChannel]=useState<'height'|'normal'>('height');
   const [playing,setPlaying]=useState(false),clock=useRef(0);
   const {maps,error}=useMaterialPreview(playing,clock,previewChannel);
@@ -54,14 +55,13 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
   const animated=p.layers.some(l=>l.visible&&l.motion!=='none'&&!l.motionLocked);
   const update=(patch:Partial<HeightLayer>,group?:string)=>s.updateLayer(patch,group?`${s.selected}:${group}`:undefined);
   useEffect(()=>{
-    try{setRecovery(!!localStorage.getItem('texture-material-recovery'));}catch{}
     if(window.electron?.platform==='darwin')document.documentElement.dataset.desktop='mac';
   },[]);
   useEffect(()=>{
-    if(!s.revision)return;
+    if(!s.revision||recovery!==null)return;
     const timer=setTimeout(()=>{try{localStorage.setItem('texture-material-recovery',JSON.stringify(p));}catch{s.message('请保存项目，恢复空间已满');}},700);
     return()=>clearTimeout(timer);
-  },[p,s.revision]);
+  },[p,s.revision,recovery]);
   useEffect(()=>{
     if(!s.notice)return;
     const timer=setTimeout(()=>s.message(''),4500);return()=>clearTimeout(timer);
@@ -99,23 +99,25 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
     const target=importTarget.current;setImporting(true);
     try{
       const incoming=await Promise.all(files.map(importHeight)),current=useMaterialStore.getState().project;
-      if(current.sources.length+incoming.length>16||current.layers.length>=16&&target!=='reference')throw new Error('最多 16 个素材、16 个图层');
-      if(JSON.stringify(current).length+incoming.reduce((n,v)=>n+v.source.original.length,0)>24_000_000)throw new Error('导入后项目超过 25 MB');
+      const old=target==='background'?current.layers.find(v=>v.role==='background'&&!v.locked):undefined;
+      const obsolete=old&&!current.layers.some(v=>v.id!==old.id&&layerUsesSource(v,old.sourceId))?old.sourceId:'';
+      const retained=current.sources.filter(v=>v.id!==obsolete);
+      if(retained.length+incoming.length>16||current.layers.length>=16&&target!=='reference'&&!old)throw new Error('最多 16 个素材、16 个图层，可在我的素材中移除不用的素材');
+      if(JSON.stringify({...current,sources:retained}).length+incoming.reduce((n,v)=>n+v.source.original.length,0)>24_000_000)throw new Error('导入后项目超过 25 MB');
       const source=incoming[0].source;
       const l=target==='background'?heightLayer('image',{role:'background',name:'背景',sourceId:source.id,contrast:1,warp:0,tileSource:false}):
         heightLayer('particles',{role:'elements',name:incoming.length>1?'上传元素':source.name.replace(/\.[^.]+$/,''),sourceId:source.id,shape:'custom',
           sourceMix:incoming.map(v=>({id:v.source.id,weight:1})),count:60,sizeMin:.025,sizeMax:.06,contrast:1,softness:0,warp:0});
       s.edit(p=>{
-        p.sources.push(...incoming.map(v=>v.source));
+        p.sources=[...retained,...incoming.map(v=>v.source)];
         if(target==='background'){
-          const old=p.layers.find(v=>v.role==='background'&&!v.locked);
-          if(old){l.id=old.id;p.layers[p.layers.indexOf(old)]=l;}else p.layers.unshift(l);
+          if(old){l.id=old.id;p.layers[p.layers.findIndex(v=>v.id===old.id)]=l;}else p.layers.unshift(l);
           p.canvas={width:source.width,height:source.height};
         }else if(target==='elements')p.layers.push(l);
         else{
           const selected=p.layers.find(v=>v.id===s.selected);
           if(!selected||selected.locked)throw new Error('请先选择未锁定的图层');
-          selected.sourceId=source.id;if(selected.kind==='particles')selected.shape='custom';
+          selected.sourceId=source.id;if(selected.kind==='particles'){selected.shape='custom';selected.sourceMix=[];}
         }
       });
       if(target!=='reference')s.select(l.id);
@@ -187,11 +189,11 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
           </button>)}{!filtered.length&&<p className="material-help">没有匹配的纹理</p>}</div>
         </>:<div className="material-assets">
           {!p.sources.length&&<p className="material-help">上传图片或 SVG，和纹理一起使用。</p>}
-          {p.sources.map(source=><button key={source.id} className="material-source" title="添加到画布" onClick={()=>{
+          {p.sources.map(source=><div key={source.id} className="material-source-row"><button className="material-source" title="添加到画布" onClick={()=>{
             if(p.layers.length>=16){s.message('最多 16 个图层');return;}
             const l=heightLayer('particles',{role:'elements',name:source.name.replace(/\.[^.]+$/,''),sourceId:source.id,shape:'custom',count:40,sizeMin:.025,sizeMax:.06,contrast:1,warp:0});
             s.edit(p=>p.layers.push(l));s.select(l.id);
-          }}><SourceThumbnail source={source}/><span>{source.name}</span><Plus size={13}/></button>)}
+          }}><SourceThumbnail source={source}/><span>{source.name}</span><Plus size={13}/></button><button aria-label={`移除素材 ${source.name}`} title="移除素材及其引用，可撤销" onClick={()=>s.removeSource(source.id)}><Trash2 size={13}/></button></div>)}
         </div>}
         <div className="material-layer-heading"><span>图层</span><button aria-label="添加纹理图层" onClick={s.addLayer}><Plus size={16}/></button></div>
         <div className="material-layer-list">{[...p.layers].reverse().map(l=><div key={l.id} className={`material-layer ${s.selected===l.id?'selected':''}`}>
@@ -204,7 +206,7 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
           <button aria-label="下移图层" disabled={layer.locked||p.layers[0]?.id===layer.id} onClick={()=>move(-1)}><ChevronDown size={14}/></button>
           <button aria-label="复制纹理图层" disabled={layer.locked||p.layers.length>=16} onClick={()=>{
             const l=structuredClone(layer);l.id=materialId();l.name=`${layer.name} 副本`;
-            const seeds=new Map(createParticles(layer,0).map(o=>[o.id,o.outlineSeed]));
+            const seeds=new Map(layerParticles(p,layer,0).map(o=>[o.id,o.outlineSeed]));
             l.objects=l.objects.map(o=>({...o,id:materialId(),outlineSeed:o.outlineSeed??seeds.get(o.id)}));
             s.edit(p=>p.layers.push(l));s.select(l.id);
           }}><Copy size={14}/></button>
@@ -224,17 +226,18 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
             {previewChannel==='height'&&p.export.background==='transparent'&&<StudioSelect label="透明检查底色" value={checkBackground} onChange={setCheckBackground}><option value="checker">棋盘格</option><option value="light">白底</option><option value="dark">黑底</option></StudioSelect>}
           </div>
         </div>
-        {recovery&&<div className="material-recovery"><span>继续上次编辑？</span><button onClick={()=>{try{s.replace(parseMaterial(localStorage.getItem('texture-material-recovery')!));}catch(e){s.message((e as Error).message);}setRecovery(false);}}>恢复</button><button onClick={()=>setRecovery(false)}>关闭</button></div>}
+        {recovery!==null&&<div className="material-recovery"><span>继续上次编辑？</span><button onClick={()=>{try{s.replace(parseMaterial(recovery));}catch(e){s.message((e as Error).message);}setRecovery(null);}}>恢复</button><button onClick={()=>setRecovery(null)}>关闭</button></div>}
         <div className="material-stage">
           <div className={`material-flat material-check-${checkBackground}`} onPointerDown={e=>{
             if(!layer||layer.locked||layer.distribution!=='manual'||playing||tiled||layer.motion!=='none'||previewChannel==='normal'&&layer.role!=='texture')return;
             const rect=e.currentTarget.querySelector('canvas')!.getBoundingClientRect(),x=(e.clientX-rect.left)/rect.width,y=(e.clientY-rect.top)/rect.height;
             if(x<0||x>1||y<0||y>1)return;
-            const item=createParticles(layer,0).reverse().find(o=>!o.locked&&torusDistance({x,y},o)<o.radius);
-            if(item){drag.current={id:item.id,dx:frac(x-item.x+.5)-.5,dy:frac(y-item.y+.5)-.5};e.currentTarget.setPointerCapture(e.pointerId);window.dispatchEvent(new Event('texture-range-start'));}
+            const item=layerParticles(p,layer,0).reverse().find(o=>!o.locked&&(layer.role==='elements'?artworkHit(p,layer,o,x,y):torusDistance({x,y},o)<o.radius));
+            if(item){drag.current={id:item.id,dx:layer.role==='elements'&&layer.repeat===false?x-item.x:frac(x-item.x+.5)-.5,dy:layer.role==='elements'&&layer.repeat===false?y-item.y:frac(y-item.y+.5)-.5};e.currentTarget.setPointerCapture(e.pointerId);window.dispatchEvent(new Event('texture-range-start'));}
           }} onPointerMove={e=>{
             if(!drag.current||!layer||layer.locked)return;
-            const rect=e.currentTarget.querySelector('canvas')!.getBoundingClientRect(),x=frac((e.clientX-rect.left)/rect.width-drag.current.dx),y=frac((e.clientY-rect.top)/rect.height-drag.current.dy),id=drag.current.id;
+            const constrain=(v:number)=>layer.role==='elements'&&layer.repeat===false?Math.max(0,Math.min(1,v)):frac(v);
+            const rect=e.currentTarget.querySelector('canvas')!.getBoundingClientRect(),x=constrain((e.clientX-rect.left)/rect.width-drag.current.dx),y=constrain((e.clientY-rect.top)/rect.height-drag.current.dy),id=drag.current.id;
             s.edit(p=>{const o=p.layers.find(l=>l.id===layer.id)?.objects.find(o=>o.id===id);if(o&&!o.locked){o.x=x;o.y=y;}},`${id}:drag`);
           }} onPointerUp={()=>{if(drag.current)window.dispatchEvent(new Event('texture-range-end'));drag.current=null;}} onPointerCancel={()=>{if(drag.current)window.dispatchEvent(new Event('texture-range-end'));drag.current=null;}}>
             <MapView maps={maps} normal={previewChannel==='normal'} transparent={p.export.background==='transparent'} pigment={p.export.pigment} repeat={tiled?3:1} label="画布预览"/>
@@ -260,9 +263,9 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
           {layer.role==='background'?<SelectField label="图片适配" value={layer.fit} disabled={layer.locked} onChange={v=>update({fit:v as HeightLayer['fit']})}><option value="fill">填满</option><option value="fit">完整显示</option><option value="tile">重复平铺</option></SelectField>:
             discrete?<><Field label="数量" value={layer.count} min={0} max={2000} disabled={layer.locked||layer.distribution==='manual'} onChange={v=>update({count:v},'count')}/>
               <Field label="大小" value={layer.sizeMax*100} min={.1} max={20} step={.1} unit="%" disabled={layer.locked} onChange={v=>update({sizeMin:v/100*.5,sizeMax:v/100,
-                ...(layer.distribution==='manual'?{objects:layer.objects.map(o=>({...o,size:Math.max(.0001,Math.min(.4,o.size*v/100/layer.sizeMax))}))}:{})},'size')}/>
+                ...(layer.distribution==='manual'?{objects:layer.objects.map(o=>o.locked?o:{...o,size:Math.max(.0001,Math.min(.4,o.size*v/100/layer.sizeMax))})}:{})},'size')}/>
               <SelectField label="排列" value={layer.distribution} disabled={layer.locked} onChange={v=>{
-                if(v==='manual'&&layer.distribution!=='manual')update({distribution:'manual',objects:createParticles(layer,0).map(o=>({...o,id:materialId()}))});
+                if(v==='manual'&&layer.distribution!=='manual')update({distribution:'manual',objects:layerParticles(p,layer,0).map(o=>({...o,id:materialId()}))});
                 else update({distribution:v as HeightLayer['distribution']});
               }}><option value="random">随机</option><option value="grid">网格</option><option value="stagger">错位</option><option value="cluster">聚集</option><option value="spaced">均匀疏散</option><option value="manual">手工</option>{!['random','grid','stagger','cluster','spaced','manual'].includes(layer.distribution)&&<option value={layer.distribution}>{({blue:'均匀',gradient:'渐变',radial:'放射',path:'路径',mirror:'镜像',kaleidoscope:'万花筒'} as Record<string,string>)[layer.distribution]}</option>}</SelectField>
             </>:<>
@@ -271,6 +274,12 @@ export function MaterialStudio({onOpenPattern}:{onOpenPattern:(text:string)=>voi
               <Field label="对比度" value={layer.contrast} min={0} max={4} step={.01} disabled={layer.locked} onChange={v=>update({contrast:v},'contrast')}/>
               <Field label="亮度" value={layer.bias} min={-1} max={1} step={.01} disabled={layer.locked} onChange={v=>update({bias:v},'bias')}/>
             </>}
+          {layer.role==='elements'&&<>
+            <SelectField label="图案边界" value={layer.repeat?'tile':'canvas'} disabled={layer.locked} onChange={v=>update({repeat:v==='tile'})}><option value="tile">无缝平铺</option><option value="canvas">画布内排列</option></SelectField>
+            <Field label="元素间距" value={layer.elementSpacing} min={-1} max={Math.max(p.canvas.width,p.canvas.height)/2} unit="px" disabled={layer.locked||layer.distribution==='manual'} onChange={v=>update({elementSpacing:v},'elementSpacing')}/>
+            {!layer.repeat&&<Field label="边缘间距" value={layer.edgeMargin} min={-Math.min(p.canvas.width,p.canvas.height)/2} max={Math.min(p.canvas.width,p.canvas.height)/2} unit="px" disabled={layer.locked||layer.distribution==='manual'} onChange={v=>update({edgeMargin:v},'edgeMargin')}/>}
+            <p className="material-help">间距 −1 允许重叠，0 起避免重叠。{!layer.repeat&&'边缘负值允许出界。'}{layer.distribution!=='manual'&&`实际生成 ${layerParticles(p,layer).length} 个；空间不足时数量减少。`}</p>
+          </>}
           <Field label="不透明度" value={layer.opacity*100} min={0} max={100} unit="%" disabled={layer.locked} onChange={v=>update({opacity:v/100},'opacity')}/>
           <SelectField label="混合" value={layer.blend} disabled={layer.locked} onChange={v=>update({blend:v as HeightLayer['blend']})}><option value="replace">正常</option><option value="multiply">正片叠底</option><option value="add">叠加</option><option value="max">变亮</option></SelectField>
           <details className="material-advanced"><summary>更多调整</summary>

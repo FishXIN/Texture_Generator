@@ -86,7 +86,7 @@ export function createParticles(l:HeightLayer,phase=0):Particle[] {
     const outlineSeed=p.outlineSeed??(l.distribution==='manual'?[...p.id].reduce((n,c)=>(Math.imul(n,31)+c.charCodeAt(0))>>>0,17):(l.seed+(l.distribution==='kaleidoscope'?Math.floor(i/l.sectors):i)*137)>>>0);
     const outline=shapeOutline(p.shape,outlineSeed);
     const radius=p.shape==='custom'?size*Math.hypot(aspect,1):size*Math.max(1,aspect)*(Math.max(...outline.map(q=>Math.hypot(q.x,q.y)))+l.softness*.4);
-    return{...p,outlineSeed,x:frac(at.x),y:frac(at.y),size,aspect,opacity:p.opacity*attr.opacity,outline,hole:p.shape==='ring',radius,cs:Math.cos(angle),sn:Math.sin(angle),order:i};
+    return{...p,outlineSeed,x:l.role==='elements'&&l.repeat===false?at.x:frac(at.x),y:l.role==='elements'&&l.repeat===false?at.y:frac(at.y),size,aspect,opacity:p.opacity*attr.opacity,outline,hole:p.shape==='ring',radius,cs:Math.cos(angle),sn:Math.sin(angle),order:i};
   });
 }
 function signedDistance(x:number,y:number,points:Point[]) {

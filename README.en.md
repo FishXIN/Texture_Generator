@@ -1,24 +1,34 @@
 # Texture Generator
 
+
 A local texture studio for designers. Generate seamless monochrome paper grain, speckles, grunge, fibers and cracks for Multiply overlays, transparent compositing and grayscale masks. Normal maps are optional. The main workspace shows the texture directly in 2D.
 
-[简体中文](README.md#简体中文) · [Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
+[Product plan](docs/product-plan.md) · [Capability coverage](docs/texture-coverage.md) · [Roadmap](docs/roadmap.md) · [Development](docs/development.md) · [Changelog](CHANGELOG.md) · [Published installers](https://github.com/FishXIN/Texture_Generator/releases)
 
-**Main contains the 0.6.0 source. Existing release installers retain their older capabilities; check the attached version.**
+**Version 0.7.0 combines editable custom artwork and the monochrome workbench. Download the matching installer from Releases.**
 
 ![Monochrome texture studio](docs/images/texture-studio.png)
 
+## Custom artwork
+
+Upload your own PNG / SVG elements, generate a pattern, then switch to Manual to edit individual objects. Original colors and Alpha are preserved. Choose seamless tiling or canvas-only placement with element spacing and edge margins. Spacing −1 permits overlaps; 0 or higher uses conservative bounds to avoid overlaps. Constraints apply to static automatic placement; manual edits and motion can leave those bounds.
+
+Export **Editable SVG** to keep SVG shapes and independent raster image objects. In compositions, continuous textures remain separate image layers; texture-only compositions remain one image when they cannot be represented as vectors. **Pure / optimized SVG** retains colored SVG artwork and rejects raster or incompatible effects. **Effects SVG** flattens the full appearance into one PNG. Editable exports are capped at 64 MB. Source removal cleans references and supports undo; locked references must be unlocked first.
+
 ## Monochrome textures
 
-- One flat workspace combines monochrome textures, uploaded backgrounds and colored PNG/SVG elements. Preset selection keeps uploaded artwork.
-- Common adjustments appear first; algorithms, seeds and optional normal output live in advanced settings.
-- Damped sliders update the central canvas throughout dragging. A persistent worker renders the latest parameters and restores detailed preview on release.
-- Background upload preserves aspect ratio. Export the whole canvas or materials without the background image; compositions retain color and Alpha as 8-bit RGBA.
-- 119 editable presets across 11 searchable visual groups, with unified continuous fields, graphic particles, input grayscale/Alpha and animation.
-- Twelve layouts: random, grid, stagger, cluster, spaced, blue noise, gradient, radial, editable/SVG path, mirror, kaleidoscope and manual dragging.
-- Independent particle size, grayscale and Alpha ranges; weighted SVG input mixing and persistent manual outline seeds.
-- Thirteen periodic motions including RK4 curl flow, vortex, wave, flicker, grow, morph, parallax, snow refresh and evolution.
-- Ten advanced algorithms: Value, Perlin, torus Simplex, Worley, uniform, Gaussian, salt-and-pepper, Poisson counts, Blue Noise and random Gabor kernels.
+- One flat workspace combines monochrome textures, uploaded backgrounds and colored PNG/SVG elements in the same layer stack. Applying presets preserves uploaded artwork.
+- Common adjustments appear first. Algorithms and seeds stay in advanced settings; normal maps are directly selectable in the export dialog.
+- Switch between grayscale artwork and normal-map previews above the canvas. Both update live and support tiling; preview selection preserves export settings.
+- Borderless controls, faint dividers and consistent neutral popups throughout both workspaces.
+- Canvas shortcuts include square, 16:9, 9:16, 4:3 and other common ratios, with 1K / 2K / 4K / 8K quality choices and custom dimensions.
+- Damped sliders update the canvas while dragging; a persistent worker renders the latest parameters and restores full preview detail on release.
+- Background upload preserves the original aspect ratio. Export the whole canvas or just the materials, excluding the background image; colored compositions use 8-bit RGBA.
+- 119 editable presets across 11 searchable visual groups: grain, fragments, film, paper, nature, painting, surfaces, digital, halftone, graphics and soft light.
+- Unified particles, editable paths, radial/mirror/kaleidoscope layouts, manual dragging, SVG stamps and weighted source mixing.
+- Independent particle density, size, grayscale and alpha ranges; safe original inputs retain separate grayscale and Alpha.
+- Thirteen looping motions, including RK4 curl flow, vortex, wave, flicker, evolution and discrete snow refresh.
+- Ten advanced algorithms: Value, Perlin, torus Simplex, Worley, uniform, Gaussian, salt-and-pepper, Poisson counts, blue noise and random Gabor kernels.
 - Xuan, mulberry, cotton, watercolor, laid, recycled, kraft, aged and crumpled paper; white/black marble and ink marbling.
 - Halftone dots, variable dots, comic hatching, spectral interference and contours; glow, bokeh, mist and satin patterns.
 - Periodic noise, ridged noise, cellular patterns and smooth seeded dots with shared height/gradient calculations.
@@ -35,17 +45,18 @@ A local texture studio for designers. Generate seamless monochrome paper grain, 
 | White transparent PNG, 8 / 16 bit | White pigment with alpha = grayscale; light overlays |
 | Optional normal PNG, RGB 8 bit | Tangent-space directions, OpenGL +Y or DirectX −Y; import as non-color data |
 | Paired ZIP | Texture, normal and an output manifest |
-| Pure / optimized SVG | Actual graphic paths and reusable structures; incompatible effects are rejected |
+| Editable SVG | SVG shapes and independent raster objects; continuous textures remain images |
+| Pure / optimized SVG | Colored artwork, graphic paths and reusable structures; incompatible effects are rejected |
 | Effects SVG | Explicitly embeds PNG to retain continuous effects |
-| PNG sequence ZIP | Looping frames, optional Alpha / normals and timing manifest |
+| PNG sequence ZIP | Arbitrary-frame loops, optional Alpha / normals, timing manifest |
 
-The default is an 8-bit grayscale PNG with normal output disabled. Export sizes are 128–4096 px; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
+The default is an 8-bit grayscale PNG. Select grayscale/transparent output, a normal map or both directly in the export dialog; normal strength and OpenGL/DirectX settings remain under advanced settings. Export longest edges are 128–8192 px and preserve the canvas ratio; preview is 512 px. True 16-bit samples are encoded directly from floating-point values, without an 8-bit Canvas intermediate. PNG compression streams small row blocks to reduce 8K memory use. Soft-light presets also support Screen/Soft Light blending or white transparent overlays. Preview backgrounds and tile guides are excluded. Older projects receive defaults for the new controls.
 
 ![Additional texture families](docs/images/texture-families.png)
 
 Paper and stone presets are procedural style simulations, not physical scans.
 
-Limits: sixteen layers and imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Preview sources decode at up to 1024 px; exports read original raster detail and decode SVG at the requested resolution. Pure textures retain true 8/16-bit gray/Alpha. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; dragging and animation use 192 px.
+Limits: sixteen layers and imported sources, 2000 ordinary particles per layer, 512 blue/spaced samples, 5 MB per source and 25 MB per project. Preview sources decode at up to 1024 px; exports decode original raster detail and render SVG at the requested resolution. Procedural image inputs still use separate gray/Alpha channels. Sequence exports are limited to 128 million total pixels. Static preview is 512 px; dragging and animation use 192 px.
 
 No colored material channels, 3D viewport, node editor or model baking is included. See [implementation and boundaries](docs/material-studio.md).
 
@@ -105,8 +116,10 @@ npm test
 npm run dist:mac                  # On Windows: npm run dist:win
 ```
 
-Twenty-seven Playwright scenarios cover all 119 presets, algorithm statistics and gradients, blue-noise spectral suppression, periodic space and time, input Alpha, SVG pixel agreement, true 16-bit PNG, manual dragging, undo, old-project defaults and the existing graphics/motion workflow.
+Playwright scenarios cover preset reproducibility, algorithm statistics/gradients, blue-noise spectral suppression, periodic time/UV, input Alpha, SVG pixel agreement, true 16-bit PNG, manual dragging, undo and the existing workflow.
 
 Project architecture: `src/app` routes the workspaces; `features/material` owns monochrome fields, Worker generation, PNG encoding and the 2D editor; `project`, `assets`, `texture` and `export` retain the graphics/motion workflow. See [architecture](docs/architecture.md) and [contributing](CONTRIBUTING.md).
+
+## License
 
 [MIT](LICENSE)

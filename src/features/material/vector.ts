@@ -6,14 +6,22 @@ import { phaseSeed } from './animation';
 import { encodePng } from './png';
 import { materialFilename } from './export';
 import { outputDimensions } from './composition';
+import { artworkSvg, textureLayerProject } from './artworkSvg';
+import { layerUsesSource } from './model';
 
-export type VectorMode='pure'|'optimized'|'effect';
+export type VectorMode='pure'|'optimized'|'editable'|'effect';
 const gray=(v:number)=>{const c=Math.round(Math.max(0,Math.min(1,v))*255);return`rgb(${c},${c},${c})`;};
 export function vectorIssues(p:MaterialProject) {
   const issues:string[]=[];
-  if(p.export.maps!=='height')issues.push('SVG 只输出黑白纹理；法线请使用 PNG');
-  for(const l of p.layers.filter(l=>l.visible&&l.opacity>0)){
-    if(l.role&&l.role!=='texture'){issues.push(`${l.name}：原色素材需保留效果导出`);continue;}
+  if(p.export.maps!=='height')issues.push('SVG 不输出法线，请使用 PNG');
+  for(const l of p.layers.filter(l=>l.visible&&l.opacity>0&&(p.export.scope!=='material'||l.role!=='background'))){
+    if(l.role&&l.role!=='texture'){
+      for(const source of p.sources.filter(s=>layerUsesSource(l,s.id))){
+        if(source.mime!=='image/svg+xml')issues.push(`${source.name}：位图请使用可编辑 SVG`);
+        else if(!sanitizeSvg(source.original,source.name).pure)issues.push(`${source.name}：包含滤镜、位图或字体，请使用可编辑 SVG`);
+      }
+      continue;
+    }
     if(l.kind!=='particles'){issues.push(`${l.name}：连续纹理或效果需要位图`);continue;}
     if(l.softness>0)issues.push(`${l.name}：软边需要位图`);
     if(l.contrast!==1||l.bias!==0||l.invert)issues.push(`${l.name}：灰度调整需要效果模式`);
@@ -44,8 +52,14 @@ function monochromeSvg(svg:string,invert=false) {
   }
   return new XMLSerializer().serializeToString(doc.documentElement);
 }
-export function materialSvg(p:MaterialProject,mode:Exclude<VectorMode,'effect'>='pure') {
+export function materialSvg(p:MaterialProject,mode:'pure'|'optimized'='pure'):string {
   const issues=vectorIssues(p);if(issues.length)throw new Error(`无法纯矢量导出：${issues.join('；')}。请选择效果模式。`);
+  const visible=p.layers.filter(l=>l.visible&&l.opacity>0&&(p.export.scope!=='material'||l.role!=='background'));
+  if(visible.some(l=>l.role!=='texture')){
+    const textures=new Map(visible.flatMap((l,i)=>l.role==='texture'?[[l.id,materialSvg(textureLayerProject(p,l,i),mode)] as [string,string]]:[]));
+    return artworkSvg(p,mode,textures);
+  }
+  p={...p,layers:visible};
   const dims=outputDimensions(p,p.export.size),defs:string[]=[],content:string[]=[],sources=new Map(p.sources.map(s=>[s.id,s]));
   const transparent=p.export.background==='transparent',white=p.export.pigment==='white',inverse=transparent&&!white;
   const paint=(v:number)=>gray(inverse?1-v:v);

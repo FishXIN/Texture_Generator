@@ -14,7 +14,7 @@ export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
   const s = useMaterialStore(), p = s.project;
   const [busy, setBusy] = useState(false), [progress, setProgress] = useState(0), [error, setError] = useState('');
   const [format,setFormat]=useState<NonNullable<MaterialTaskOptions['format']>>('png');
-  const svg=['pure','optimized','effect'].includes(format),vector=format==='pure'||format==='optimized';
+  const svg=['pure','optimized','editable','effect'].includes(format),vector=format==='pure'||format==='optimized';
   const exportProject={...p,layers:p.layers.filter(l=>p.export.scope!=='material'||l.role!=='background')};
   const composite=exportProject.layers.some(l=>l.role!=='texture');
   const issues=format==='pure'||format==='optimized'?vectorIssues(exportProject):[];
@@ -56,10 +56,10 @@ export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
       <div className="material-export-fields">
         <SelectField label="导出格式" value={format} disabled={busy} onChange={v=>{
           setFormat(v as typeof format);
-          if(['pure','optimized','effect'].includes(v))s.edit(p=>{p.export.maps='height';});
+          if(['pure','optimized','editable','effect'].includes(v))s.edit(p=>{p.export.maps='height';});
         }}>
           <option value="png">PNG</option><option value="sequence">PNG 序列</option>
-          <option value="pure">矢量 SVG</option><option value="optimized">优化 SVG</option><option value="effect">保留效果 SVG</option>
+          <option value="editable">可编辑 SVG</option><option value="pure">矢量 SVG</option><option value="optimized">优化 SVG</option><option value="effect">保留效果 SVG</option>
         </SelectField>
         {!svg&&<SelectField label="贴图类型" value={p.export.maps} disabled={busy} onChange={v=>s.edit(p=>{p.export.maps=v as typeof p.export.maps;})}>
           <option value="height">{composite?'画布素材':'黑白 / 透明素材'}</option><option value="normal">法线贴图</option><option value="both">素材＋法线（ZIP）</option>
@@ -74,7 +74,8 @@ export function MaterialExportPanel({ onClose }: { onClose: () => void }) {
       </div>
       {format==='sequence'&&<p className="material-help">{Math.round(p.timeline.duration*p.timeline.fps)} 帧，打包下载</p>}
       {format==='effect'&&<p className="material-help">包含嵌入的图片，保留画布效果。</p>}
-      {issues.length>0&&<p className="material-help">{issues.join('；')}。可选择「保留效果 SVG」。</p>}
+      {format==='editable'&&<p className="material-help">SVG 保留图形，PNG 保留独立图片；连续纹理保留为图片图层。可继续移动、缩放和旋转元素。</p>}
+      {issues.length>0&&<p className="material-help">{issues.join('；')}。可选择「可编辑 SVG」或「保留效果 SVG」。</p>}
       <details><summary>高级设置</summary>
         {!vector&&p.export.maps!=='normal'&&!composite&&<SelectField label="灰度位深" value={String(p.export.depth)} disabled={busy} onChange={v=>s.edit(p=>{p.export.depth=Number(v) as 8|16;})}><option value="8">8 位</option><option value="16">16 位</option></SelectField>}
         {composite&&p.export.maps!=='normal'&&<p className="material-help">上传素材保留原色，导出为 8 位 RGBA。</p>}

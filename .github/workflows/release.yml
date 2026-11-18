@@ -2,15 +2,38 @@ name: Release Desktop App
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - name: Check release version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node -e "if ('v'+require('./package.json').version !== process.env.GITHUB_REF_NAME) process.exit(1)"
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: release-browser-evidence
+          path: test-results/
+
   build:
+    needs: acceptance
     strategy:
       fail-fast: false
       matrix:
@@ -20,28 +43,54 @@ jobs:
           - os: windows-latest
             build_script: dist:win
     runs-on: ${{ matrix.os }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+      - run: npm ci
+      - name: Build installer without publishing
+        run: npm run ${{ matrix.build_script }} -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Verify packaged startup, rendering and native save
+        run: npm run smoke:desktop
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-evidence-${{ runner.os }}
+          path: release/smoke-*/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ runner.os }}
+          path: |
+            release/*.dmg
+            release/*.exe
+          if-no-files-found: error
 
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build Installer
-        run: npm run ${{ matrix.build_script }}
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          path: release-artifacts
+          merge-multiple: true
+      - name: Publish verified installers
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Upload Workflow Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ runner.os }}-installer
-          path: |
-            release/**
+        shell: bash
+        run: |
+          cd release-artifacts
+          sha256sum *.dmg *.exe > SHA256SUMS.txt
+          cd ..
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Texture Generator $GITHUB_REF_NAME" --notes-file "docs/release-notes/$GITHUB_REF_NAME.md"
+          fi
+          gh release upload "$GITHUB_REF_NAME" release-artifacts/* --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest

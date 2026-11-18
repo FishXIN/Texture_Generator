@@ -1,6 +1,6 @@
 {
   "name": "texture-generator",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "A local texture workbench combining seamless monochrome textures, uploaded artwork and live parameter editing.",
   "author": "Texture Generator",
@@ -24,7 +24,8 @@
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
     "dist:mac": "npm run build && electron-builder --mac",
-    "dist:win": "npm run build && electron-builder --win"
+    "dist:win": "npm run build && electron-builder --win",
+    "smoke:desktop": "node scripts/desktop-smoke.cjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",

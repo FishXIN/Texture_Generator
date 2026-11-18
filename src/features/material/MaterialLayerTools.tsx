@@ -1,6 +1,6 @@
 import { Field, SelectField, Toggle } from '@/shared/ui/StudioFields';
 import { algorithms } from './algorithms';
-import { createParticles } from './particles';
+import { layerParticles } from './artwork';
 import { materialId, distributions, motions, particleShapes } from './model';
 import type { HeightLayer, ManualObject } from './model';
 import { useMaterialStore } from './store';
@@ -17,20 +17,22 @@ export function MaterialLayerTools({layer:l}:{layer:HeightLayer}) {
   const usesInput=['film','oldphoto','copier','spray','airbrush','bleed','drybrush','pencil','charcoal','chalk','crayon','screen','stamp','wear','halftone','halftoneSquare','halftoneEllipse','halftoneLine','ditherRandom','ditherOrdered','glitch','compression','signal','particles'].includes(l.kind);
   return <>
     {discrete&&<details><summary>图形与分布</summary>
-      {particle&&<SelectField label="图形形状" value={l.shape} disabled={disabled} onChange={v=>update({shape:v as HeightLayer['shape']})}>{Object.entries(particleShapes).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>}
-      {l.kind!=='spray'&&<SelectField label="分布方式" value={l.distribution} disabled={disabled} onChange={v=>update({distribution:v as HeightLayer['distribution']})}>{Object.entries(distributions).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>}
+      {particle&&l.role!=='elements'&&<SelectField label="图形形状" value={l.shape} disabled={disabled} onChange={v=>update({shape:v as HeightLayer['shape']})}>{Object.entries(particleShapes).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>}
+      {l.kind!=='spray'&&<SelectField label="分布方式" value={l.distribution} disabled={disabled} onChange={v=>update({distribution:v as HeightLayer['distribution'],...(v==='manual'&&l.distribution!=='manual'?{objects:layerParticles(p,l,0).map(o=>({...o,id:materialId()}))}:{})})}>{Object.entries(distributions).map(([id,name])=><option key={id} value={id}>{name}</option>)}</SelectField>}
       <Field label="图形数量" value={l.count} min={0} max={2000} disabled={disabled||l.distribution==='manual'} onChange={v=>update({count:v},'count')}/>
       <Field label="最小尺寸" value={l.sizeMin} min={.0001} max={.15} step={.0001} disabled={disabled} onChange={v=>update({sizeMin:v,sizeMax:Math.max(v,l.sizeMax)},'sizeMin')}/>
       <Field label="最大尺寸" value={l.sizeMax} min={.0001} max={.15} step={.0001} disabled={disabled} onChange={v=>update({sizeMax:v,sizeMin:Math.min(v,l.sizeMin)},'sizeMax')}/>
       <Field label="长宽比例" value={l.aspect} min={.1} max={5} step={.1} disabled={disabled} onChange={v=>update({aspect:v},'aspect')}/>
       <Field label="最小角度" value={l.angleMin} min={-180} max={360} disabled={disabled} onChange={v=>update({angleMin:v,angleMax:Math.max(v,l.angleMax)},'angleMin')}/>
       <Field label="最大角度" value={l.angleMax} min={-180} max={360} disabled={disabled} onChange={v=>update({angleMax:v,angleMin:Math.min(v,l.angleMin)},'angleMax')}/>
+      {l.role!=='elements'&&<>
       <Field label="底层明度" value={l.baseGray} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({baseGray:v},'baseGray')}/>
       <Field label="最暗颗粒" value={l.grayMin} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({grayMin:v,grayMax:Math.max(v,l.grayMax)},'grayMin')}/>
       <Field label="最亮颗粒" value={l.grayMax} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({grayMax:v,grayMin:Math.min(v,l.grayMin)},'grayMax')}/>
+      </>}
       <Field label="最小透明度" value={l.alphaMin} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({alphaMin:v,alphaMax:Math.max(v,l.alphaMax)},'alphaMin')}/>
       <Field label="最大透明度" value={l.alphaMax} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({alphaMax:v,alphaMin:Math.min(v,l.alphaMin)},'alphaMax')}/>
-      <Field label="图形边缘柔和" value={l.softness} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({softness:v},'softness')}/>
+      {l.role!=='elements'&&<Field label="图形边缘柔和" value={l.softness} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({softness:v},'softness')}/>}
       {l.kind==='spray'&&<Field label="喷涂范围" value={l.coverage} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({coverage:v},'coverage')}/>}
       {l.distribution==='spaced'&&<Field label="中心最小间距" value={l.spacing} min={0} max={.2} step={.001} disabled={disabled} onChange={v=>update({spacing:v},'spacing')}/>}
       {(l.distribution==='radial'||l.distribution==='kaleidoscope')&&<>
@@ -46,13 +48,14 @@ export function MaterialLayerTools({layer:l}:{layer:HeightLayer}) {
         <SelectField label="读取 SVG 轮廓" value="" disabled={disabled} onChange={id=>{try{update({path:sampleSvgPath(p.sources.find(s=>s.id===id)!)});}catch(e){s.message((e as Error).message);}}}><option value="">选择已导入 SVG</option>{p.sources.filter(s=>s.mime==='image/svg+xml').map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</SelectField>
       </div>}
       {particle&&<><button disabled={disabled} onClick={()=>{
-        const objects=createParticles(l,0).map(({x,y,size,angle,aspect,gray,opacity,shape,sourceId,flipX,flipY,locked,motionLocked,outlineSeed})=>({id:materialId(),x,y,size,angle,aspect,gray,opacity,shape,sourceId,flipX,flipY,locked,motionLocked,outlineSeed}));
+        const objects=layerParticles(p,l,0).map(({x,y,size,angle,aspect,gray,opacity,shape,sourceId,flipX,flipY,locked,motionLocked,outlineSeed})=>({id:materialId(),x,y,size,angle,aspect,gray,opacity,shape,sourceId,flipX,flipY,locked,motionLocked,outlineSeed}));
         update({distribution:'manual',objects});s.message('已转为手工图形，可在单元预览里拖动');
       }}>将当前分布转为手工对象</button>
       {l.distribution==='manual'&&<>
         <button disabled={disabled||l.objects.length>=2000} onClick={()=>update({objects:[...l.objects,{id:materialId(),x:.5,y:.5,size:l.sizeMax,angle:0,aspect:l.aspect,gray:l.grayMin,opacity:l.alphaMax,shape:l.shape,sourceId:l.sourceId,flipX:false,flipY:false,locked:false,motionLocked:false}]})}>添加手工图形</button>
-        <p className="material-help">停止播放、关闭 3×3 后可直接拖动图形；跨边缘自动同步。</p>
+        <p className="material-help">停止播放、关闭平铺预览后，可直接拖动图形。</p>
         {l.objects.map((o,i)=><details key={o.id}><summary>图形 {i+1}{o.locked?' · 已锁定':''}</summary>
+          {l.role==='elements'&&<SelectField label={`图形 ${i+1} 素材`} value={o.sourceId} disabled={disabled||o.locked} onChange={v=>setObject(o.id,{sourceId:v})}>{p.sources.map(source=><option key={source.id} value={source.id}>{source.name}</option>)}</SelectField>}
           <Field label={`图形 ${i+1} X`} value={o.x} min={0} max={1} step={.001} disabled={disabled||o.locked} onChange={v=>setObject(o.id,{x:v})}/>
           <Field label={`图形 ${i+1} Y`} value={o.y} min={0} max={1} step={.001} disabled={disabled||o.locked} onChange={v=>setObject(o.id,{y:v})}/>
           <Field label={`图形 ${i+1} 尺寸`} value={o.size} min={.001} max={.2} step={.001} disabled={disabled||o.locked} onChange={v=>setObject(o.id,{size:v})}/>
@@ -70,7 +73,7 @@ export function MaterialLayerTools({layer:l}:{layer:HeightLayer}) {
       <Field label="效果中心 Y" value={l.centerY} min={0} max={1} step={.01} disabled={disabled} onChange={v=>update({centerY:v},'centerY')}/>
     </>}
     {usesInput&&<details><summary>输入图 / 蒙版</summary>
-      <SelectField label={particle?'图形素材':'输入灰度 / Alpha'} value={l.sourceId} disabled={disabled} onChange={v=>update({sourceId:v,...(particle&&v?{shape:'custom' as const}:{})})}><option value="">使用程序化默认</option>{p.sources.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</SelectField>
+      <SelectField label={particle?'图形素材':'输入灰度 / Alpha'} value={l.sourceId} disabled={disabled} onChange={v=>update({sourceId:v,...(particle?{shape:v?'custom' as const:'circle' as const,sourceMix:[]}:{})})}>{l.role!=='elements'&&<option value="">使用程序化默认</option>}{p.sources.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</SelectField>
       {!particle&&<><SelectField label="亮度响应" value={l.response} disabled={disabled} onChange={v=>update({response:v as HeightLayer['response']})}><option value="all">全画面</option><option value="dark">暗部</option><option value="edge">边缘</option><option value="alpha">Alpha 覆盖</option></SelectField><Toggle label="输入周期边缘融合" checked={l.tileSource} disabled={disabled} onChange={v=>update({tileSource:v})}/></>}
       {particle&&p.sources.length>1&&<>{p.sources.map(source=><Field key={source.id} label={`${source.name} 比例`} value={l.sourceMix.find(m=>m.id===source.id)?.weight??0} min={0} max={10} step={.1} disabled={disabled} onChange={v=>update({shape:'custom',sourceMix:[...l.sourceMix.filter(m=>m.id!==source.id),{id:source.id,weight:v}]},'mix')}/>)}</>}
     </details>}

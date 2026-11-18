@@ -116,10 +116,12 @@ export type HeightLayer = {
   shape:ParticleShape; distribution:Distribution; count:number; sizeMin:number; sizeMax:number;
   aspect:number; angleMin:number; angleMax:number; grayMin:number; grayMax:number; baseGray:number;
   alphaMin:number; alphaMax:number; spacing:number; centerX:number; centerY:number; sectors:number;
+  repeat:boolean; elementSpacing:number; edgeMargin:number;
   path:Point[]; objects:ManualObject[]; sourceMix:{id:string;weight:number}[];
   motion:Motion; amplitude:number; cycles:number; motionDirection:number; motionLocked:boolean;
 };
 export type HeightSource = { id: string; name: string; original: string; mime: string; width: number; height: number };
+export const layerUsesSource=(l:HeightLayer,id:string)=>l.sourceId===id||l.sourceMix.some(s=>s.id===id)||l.objects.some(o=>o.sourceId===id);
 export type MaterialProject = {
   kind: 'surface-material'; version: 1; name: string; layers: HeightLayer[]; sources: HeightSource[];
   canvas: { width: number; height: number };
@@ -139,6 +141,7 @@ export const heightLayer = (kind: Generator = 'noise', patch: Partial<HeightLaye
   algorithm:'value',transform:'fbm',response:'all',shape:'circle',distribution:'random',
   count:400,sizeMin:.004,sizeMax:.012,aspect:1,angleMin:0,angleMax:360,grayMin:0,grayMax:0,
   alphaMin:1,alphaMax:1,baseGray:1,spacing:.015,centerX:.5,centerY:.5,sectors:6,
+  repeat:true,elementSpacing:-1,edgeMargin:0,
   path:[{x:.1,y:.5},{x:.3,y:.2},{x:.6,y:.8},{x:.9,y:.5}],objects:[],sourceMix:[],
   motion:'none',amplitude:.12,cycles:1,motionDirection:0,motionLocked:false,...patch,
 });
@@ -251,7 +254,7 @@ export function newMaterial(preset: string = 'paper'): MaterialProject {
     export: { size: 2048, depth: 8, maps: 'height', background: 'white', pigment:entry.group === 'light' ? 'white' : 'black', scope: 'canvas' },
   };
 }
-export const isSeamless = (p: MaterialProject) => p.layers.filter(l => l.visible && l.opacity > 0).every(l => !l.sourceId || l.kind==='particles' || l.tileSource);
+export const isSeamless = (p: MaterialProject) => p.layers.filter(l => l.visible && l.opacity > 0 && (p.export.scope !== 'material' || l.role !== 'background')).every(l => l.role === 'elements' ? l.repeat !== false : !l.sourceId || l.kind==='particles' || l.tileSource);
 export function parseMaterial(text: string): MaterialProject {
   if (text.length > 25_000_000) throw new Error('项目超过 25 MB。');
   const p = JSON.parse(text) as MaterialProject;
@@ -280,6 +283,10 @@ export function parseMaterial(text: string): MaterialProject {
     if (l.role === undefined) l.role = 'texture';
     if (l.fit === undefined) l.fit = 'fill';
     choice(l.role, ['texture','background','elements']); choice(l.fit, ['fill','fit','tile']);
+    if(l.repeat===undefined)l.repeat=true;
+    if(l.elementSpacing===undefined)l.elementSpacing=-1;
+    if(l.edgeMargin===undefined)l.edgeMargin=0;
+    bool(l.repeat);num(l.elementSpacing,-8192,8192);num(l.edgeMargin,-8192,8192);
     if (l.role === 'background' && l.kind !== 'image' || l.role === 'elements' && l.kind !== 'particles') throw new Error('素材图层类型无效');
     bool(l.visible); bool(l.locked); bool(l.invert); bool(l.tileSource);
     if (l.coverage === undefined) l.coverage = l.kind === 'spots' ? .25 + l.detail * .75 : 0.55;

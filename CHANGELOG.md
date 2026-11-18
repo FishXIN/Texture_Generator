@@ -2,7 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## v0.7.0 — 2026-11-19
+
+### Editable custom artwork
+
+- Export uploaded SVG artwork as colored vector objects in pure / optimized SVG. Editable SVG retains individual PNG/JPEG/WebP image objects, original SVG paths and separate continuous-texture image layers; flattened Effects SVG remains available.
+- Share source aspect ratios, transforms and periodic copies between preview, PNG and SVG. Pure vector export rejects raster inputs instead of flattening them silently.
+- Add canvas-only placement, pixel-based element spacing and edge margins alongside seamless tiling. Seeded placement respects rotated bounds; available space can reduce the object count. Manual conversion preserves the generated arrangement, and locked objects keep their size.
+- Add source removal with reference cleanup, lock protection and undo. Replacing an unshared background releases the old source slot, including at the layer limit.
+- Keep the pending recovery snapshot untouched until the user restores or dismisses it.
+- Add six browser acceptance scenarios for custom exports and pixel agreement, spacing, source lifecycle, recovery and cancellation. Desktop packages include all prior unpublished 0.2–0.6 workbench improvements below.
+
 
 ### Grayscale and normal preview
 

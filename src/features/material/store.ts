@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { copyMaterial, heightLayer, newMaterial } from './model';
+import { copyMaterial, heightLayer, newMaterial, layerUsesSource } from './model';
 import type { HeightLayer, MaterialProject } from './model';
 
 type MaterialStore = {
@@ -10,6 +10,7 @@ type MaterialStore = {
   select: (id: string) => void; message: (text: string) => void;
   updateLayer: (patch: Partial<HeightLayer>, group?: string) => void;
   addLayer: () => void; randomize: () => void;
+  removeSource: (id:string) => void;
 };
 let lastGroup = '', lastEdit = 0;
 let interaction = false, interactionStarted = false;
@@ -43,6 +44,26 @@ export const useMaterialStore = create<MaterialStore>((set, get) => ({
     set({ project: p, past: [...s.past.slice(-19), s.project], future: s.future.slice(1), selected: p.layers.some(l => l.id === s.selected) ? s.selected : p.layers[0]?.id ?? '', revision: s.revision + 1 });
   },
   select: selected => set({ selected }), message: notice => set({ notice }),
+  removeSource: id => {
+    const s=get();
+    if(s.project.layers.some(l=>l.locked&&layerUsesSource(l,id)||l.objects.some(o=>o.locked&&o.sourceId===id))){
+      s.message('素材被锁定图层或图形使用，请先解锁');return;
+    }
+    s.edit(p=>{
+      p.sources=p.sources.filter(source=>source.id!==id);
+      p.layers=p.layers.filter(l=>{
+        l.sourceMix=l.sourceMix.filter(source=>source.id!==id);
+        l.objects=l.objects.filter(o=>o.sourceId!==id);
+        if(l.sourceId===id)l.sourceId=l.sourceMix[0]?.id??l.objects.find(o=>o.sourceId)?.sourceId??'';
+        if(l.kind==='image'&&!l.sourceId)return false;
+        if(l.role==='elements'&&!l.sourceId&&!l.sourceMix.length&&!l.objects.length)return false;
+        if(l.shape==='custom'&&!l.sourceId&&!l.sourceMix.length&&l.distribution!=='manual')l.shape='circle';
+        return true;
+      });
+    });
+    if(!get().project.layers.some(l=>l.id===s.selected))set({selected:get().project.layers.at(-1)?.id??''});
+    s.message('素材及引用已移除，可撤销恢复');
+  },
   updateLayer: (patch, group) => {
     const s = get(),layer=s.project.layers.find(l=>l.id===s.selected);
     if (!layer||layer.locked||Object.entries(patch).every(([key,value])=>layer[key as keyof HeightLayer]===value)) return;
